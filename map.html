@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101412">
+  <meta name="description" content="Explore harmonized satellite fire hotspot activity with FireWatch.">
+  <title>FireWatch — Fire activity map</title>
+  <link rel="stylesheet" href="calendar.css">
+  <link rel="stylesheet" href="map.css">
+  <link rel="stylesheet" href="insights.css">
+  <script src="map.js" defer></script>
+  <script src="calendar.js" defer></script>
+  <script src="insights.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="icon-button drawer-toggle" id="drawer-toggle" type="button" aria-label="Open filters" aria-controls="sidebar" aria-expanded="false">
+          <span class="hamburger" aria-hidden="true"><i></i><i></i><i></i></span>
+        </button>
+        <a class="brand" href="index.html" aria-label="FireWatch home"><span class="brand-mark" aria-hidden="true"><i></i></span><span>FIREWATCH</span></a>
+        <span class="topbar-divider" aria-hidden="true"></span>
+        <span class="page-label">FIRE ACTIVITY</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="download-button" id="download-csv" type="button"><span aria-hidden="true">↓</span> Download CSV</button>
+        <div class="menu-wrap">
+          <button class="icon-button menu-toggle" id="menu-toggle" type="button" aria-label="Open views menu" aria-controls="menu" aria-expanded="false" aria-haspopup="menu">
+            <span class="hamburger" aria-hidden="true"><i></i><i></i><i></i></span>
+          </button>
+          <div id="menu" class="menu" role="menu" aria-label="Main views" hidden>
+            <button class="menu-item is-active" id="menu-map" type="button" role="menuitem" data-view="map" aria-current="page">Map view</button>
+            <button class="menu-item" id="menu-calendar" type="button" role="menuitem" data-view="calendar">Calendar view (with predictions)</button>
+            <button class="menu-item" id="menu-compare" type="button" role="menuitem" data-view="compare">Regional comparison</button>
+            <button class="menu-item" id="menu-live" type="button" role="menuitem" data-view="live">Live hotspot detections</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <aside class="sidebar" id="sidebar" aria-label="Map filters">
+        <div class="sidebar-heading">
+          <div><p class="eyebrow">MAP CONTROLS</p><h1>Filter activity</h1></div>
+          <button id="drawer-close" class="icon-button drawer-close" type="button" aria-label="Close filters">×</button>
+        </div>
+        <p class="sidebar-intro">Adjust your view of satellite-detected fire activity.</p>
+
+        <form id="filters-form" novalidate>
+          <fieldset class="filter-group">
+            <legend><span class="field-index">01</span> Time range</legend>
+            <div class="date-stack">
+              <div class="field-control"><label for="start">Start date</label><input id="start" name="start" type="date" required></div>
+              <div class="field-control"><label for="end">End date</label><input id="end" name="end" type="date" required></div>
+            </div>
+            <p class="field-hint">Available from Nov 1, 2000 through today.</p>
+          </fieldset>
+
+          <div class="filter-group">
+            <label class="group-label" for="region"><span class="field-index">02</span> Region</label>
+            <div class="select-wrap"><select id="region" name="region" required></select><span class="chevron" aria-hidden="true">⌄</span></div>
+          </div>
+
+          <div class="filter-group">
+            <label class="group-label" for="role"><span class="field-index">03</span> Role viewpoint</label>
+            <div class="select-wrap"><select id="role" name="role" required></select><span class="chevron" aria-hidden="true">⌄</span></div>
+            <p class="field-hint" id="role-description"></p>
+          </div>
+
+          <div id="filter-error" class="filter-error" role="alert" aria-live="polite" aria-atomic="true" hidden></div>
+        </form>
+
+        <div class="sidebar-foot"><span class="live-dot" aria-hidden="true"></span><span>NASA MODIS + VIIRS</span><span class="foot-separator">/</span><span>HARMONIZED</span></div>
+      </aside>
+
+      <main class="main-content">
+        <section class="content-view map-view" id="view-map" aria-label="Map view">
+        <section class="map-panel" aria-label="Fire hotspot map">
+          <div class="map-topline"><div><span class="live-dot" aria-hidden="true"></span><span id="map-region-label">DR CONGO</span></div><span class="map-layer-label">ACTIVE FIRE HOTSPOTS <span>·</span> MODIS + VIIRS</span></div>
+          <div id="map" role="region" aria-label="Map placeholder"><div class="map-placeholder"><span class="map-crosshair" aria-hidden="true">⌖</span><strong>Map goes here</strong><span>The interactive fire activity map will appear here.</span></div></div>
+          <div class="map-legend" aria-label="Map legend"><span class="legend-title">DETECTION CONFIDENCE</span><span><i class="legend-dot low"></i>LOW</span><span><i class="legend-dot medium"></i>MEDIUM</span><span><i class="legend-dot high"></i>HIGH</span></div>
+        </section>
+
+        <section class="insights-panel" aria-labelledby="insights-title">
+          <div id="insights" aria-live="polite"></div>
+        </section>
+        <footer class="main-footer"><span>FIREWATCH <span class="footer-divider">/</span> WILDFIRE INTELLIGENCE</span><span id="date-summary">—</span></footer>
+        </section>
+
+        <section class="content-view calendar-view" id="view-calendar" aria-labelledby="calendar-title" hidden>
+          <div class="calendar-card">
+            <div class="calendar-card-heading">
+              <div><p class="eyebrow">SEASONAL PATTERNS</p><h1 id="calendar-title">Historical fire activity calendar</h1></div>
+              <span id="calendar-region" class="calendar-region">DR CONGO</span>
+            </div>
+            <p class="calendar-description">Monthly fire detections across the selected time range.</p>
+            <div id="calendar-status" class="calendar-status" role="status" aria-live="polite">Choose the calendar view to load fire activity.</div>
+            <div id="calendar-grid-wrap" class="calendar-grid-wrap" hidden>
+              <table id="calendar-grid" class="calendar-grid" aria-label="Historical monthly fire activity by year">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+              <div id="calendar-tooltip" class="calendar-tooltip" role="tooltip" hidden></div>
+            </div>
+            <div id="calendar-legend" class="calendar-legend" hidden aria-label="Fire activity scale">
+              <div class="legend-steps" aria-hidden="true"><span class="heat-swatch level-1">1</span><span class="heat-swatch level-2">2</span><span class="heat-swatch level-3">3</span><span class="heat-swatch level-4">4</span></div>
+              <div class="legend-captions"><span>Low activity</span><span>High activity</span></div>
+              <div class="legend-names"><span>Low</span><span>Moderate</span><span>Elevated</span><span>High</span></div>
+            </div>
+          </div>
+        </section>
+        <section class="content-view placeholder-view" id="view-compare" aria-labelledby="compare-title" hidden>
+          <p class="eyebrow">ACROSS REGIONS</p>
+          <h1 id="compare-title">Regional comparison goes here</h1>
+          <p>Compare fire activity between regions here.</p>
+        </section>
+        <section class="content-view placeholder-view" id="view-live" aria-labelledby="live-title" hidden>
+          <p class="eyebrow">RECENT DETECTIONS</p>
+          <h1 id="live-title">Live hotspot detections go here</h1>
+          <p>Live satellite hotspot detections will appear here.</p>
+        </section>
+        <p id="status-message" class="visually-hidden" role="status" aria-live="polite"></p>
+      </main>
+    </div>
+  </div>
+  <div class="drawer-scrim" id="drawer-scrim" hidden></div>
+</body>
+</html>

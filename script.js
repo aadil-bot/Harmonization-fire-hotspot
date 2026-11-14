@@ -49,11 +49,9 @@ endInput.max = today;
 populateOptions(regionSelect, CONFIG.regions, (region) => region.label);
 populateOptions(roleSelect, CONFIG.roles, (role) => `${role.label} — ${role.description}`);
 
-// Preselect a useful recent window while respecting the supported date range.
-const defaultStart = new Date();
-defaultStart.setFullYear(defaultStart.getFullYear() - 1);
-const defaultStartString = getLocalDateString(defaultStart);
-startInput.value = defaultStartString < CONFIG.minDate ? CONFIG.minDate : defaultStartString;
+// Start with the full supported record so the map and calendar include the
+// historical data from its first available date. Visitors can narrow it later.
+startInput.value = CONFIG.minDate;
 endInput.value = today;
 
 function showError(message, focusTarget) {
