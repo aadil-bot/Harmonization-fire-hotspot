@@ -1,24 +1,9 @@
 // Editable demo content for every sidebar role. Scores are illustrative and
 // are not operational forecasts or verified hotspot measurements.
 const ROLE_CONTENT = {
-  'early-warning': {
-    name: 'Early Warning',
-    title: 'Early warning outlook',
-    description: 'Surface emerging activity early by reviewing historical patterns, recent detections, and forecast conditions.',
-    stats: [
-      { label: '7-day preparedness outlook', value: 'Moderate', caption: 'Illustrative conditions for the coming week' },
-      { label: 'Regional hotspot anomaly', value: '+18%', caption: 'Compared with a typical period' },
-      { label: 'Peak forecast conditions', value: 'Day 5', caption: 'Illustrative peak in this outlook' },
-    ],
-    outlook: [32, 38, 44, 57, 68, 52, 36],
-    actions: [
-      { icon: '⌕', title: 'Review emerging clusters', description: 'Check recent detections near communities and critical services.', timing: 'Today' },
-      { icon: '◷', title: 'Compare seasonal activity', description: 'Look for changes against the same period in prior years.', timing: 'Prepare' },
-      { icon: '↗', title: 'Share an early signal', description: 'Pass notable changes to local monitoring partners.', timing: 'Next 24h' },
-    ],
-  },
   'emergency-response': {
     name: 'Emergency Response',
+    features: ['Regions with elevated fire-weather conditions', 'Recent hotspot activity and anomalies', '1–7 day fire-weather outlook', 'Regional preparedness priority indicators', 'Nearby reported fire incidents, if available', 'Suggested resource-readiness reviews'],
     title: 'Emergency Preparedness',
     description: 'Support readiness planning using historical activity, recent detections, and forecast conditions.',
     stats: [
@@ -34,7 +19,8 @@ const ROLE_CONTENT = {
     ],
   },
   scientist: {
-    name: 'Scientist',
+    name: 'Scientists',
+    features: ['Before-and-after harmonization charts', 'Historical anomaly analysis', 'Sensor calibration and model validation'],
     title: 'Research context',
     description: 'Explore seasonal patterns and long-term change across the harmonized satellite fire record.',
     stats: [
@@ -50,7 +36,8 @@ const ROLE_CONTENT = {
     ],
   },
   'land-manager': {
-    name: 'Land Manager',
+    name: 'Land Managers',
+    features: ['Historical burning frequency by region', 'Seasonal hotspot activity calendar', 'Vegetation and land-cover overlays', 'Areas with recurring burning activity', 'Land management planning recommendations'],
     title: 'Land and fire planning',
     description: 'Use historical fire activity and current signals to inform land stewardship and seasonal planning.',
     stats: [
@@ -66,7 +53,8 @@ const ROLE_CONTENT = {
     ],
   },
   firefighter: {
-    name: 'Firefighter',
+    name: 'Firefighters',
+    features: ['Latest satellite hotspot detections', 'Hotspot coordinates and timestamps', 'Detection confidence and fire radiative power', 'Wind and weather overlays', 'Incident verification information'],
     title: 'Operational awareness',
     description: 'Review recent satellite detections alongside local reports to support situational awareness.',
     stats: [
@@ -83,6 +71,7 @@ const ROLE_CONTENT = {
   },
   'general-view': {
     name: 'General View',
+    features: ['Interactive hotspot map', 'Current versus historical fire activity', '7-day weather outlook', 'Regional hotspot counts'],
     title: 'Fire activity overview',
     description: 'Explore the broad picture of historical fire activity and an illustrative seven-day outlook.',
     stats: [
@@ -143,6 +132,13 @@ const ROLE_CONTENT = {
     titleGroup.append(makeElement('p', 'insights-title-description', content.description));
     header.append(titleGroup);
     module.append(header);
+
+    const featureList = makeElement('ul', 'role-feature-list');
+    featureList.setAttribute('aria-label', `${content.name} view includes`);
+    (content.features || []).forEach((feature) => {
+      featureList.append(makeElement('li', '', feature));
+    });
+    module.append(featureList);
 
     const stats = makeElement('div', 'insight-stats');
     stats.setAttribute('aria-label', 'Illustrative summary statistics');

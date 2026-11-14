@@ -6,30 +6,11 @@ const CONFIG = {
     { value: 'dr-congo', label: 'DR Congo' },
   ],
   roles: [
-    {
-      value: 'early-warning', label: 'Early Warning', description: 'Spot emerging activity and changing trends.',
-      insights: ['Watch for new clusters of detections near populated areas.', 'Compare recent activity with the same period in previous years.', 'Share emerging signals with local monitoring teams.'],
-    },
-    {
-      value: 'emergency-response', label: 'Emergency Response', description: 'Support decisions during active incidents.',
-      insights: ['Review recent detections alongside incident reports.', 'Prioritize areas with repeated or expanding hotspot activity.', 'Coordinate situational updates with response partners.'],
-    },
-    {
-      value: 'scientist', label: 'Scientist', description: 'Explore patterns for research and analysis.',
-      insights: ['Compare seasonal patterns across the selected time range.', 'Consider sensor coverage and confidence when interpreting detections.', 'Use the harmonized record to examine longer-term change.'],
-    },
-    {
-      value: 'land-manager', label: 'Land Manager', description: 'Understand fire activity across managed lands.',
-      insights: ['Review activity near managed forests and land boundaries.', 'Look for recurring periods of elevated fire detections.', 'Use local knowledge to interpret possible land-use drivers.'],
-    },
-    {
-      value: 'firefighter', label: 'Firefighter', description: 'Get a wider view of recent and past hotspots.',
-      insights: ['Check the timing and distribution of recent detections.', 'Use satellite hotspots as a situational awareness aid.', 'Confirm conditions on the ground before acting on a detection.'],
-    },
-    {
-      value: 'general-view', label: 'General View', description: 'Explore the data with a broad overview.',
-      insights: ['Explore where fire activity has been detected in the selected period.', 'Compare the current view with previous seasons.', 'Hotspots indicate satellite detections and are not confirmed fire perimeters.'],
-    },
+    { value: 'general-view', label: 'General View', description: 'Interactive hotspot map, current versus historical fire activity, 7-day weather outlook, and regional hotspot counts.', insights: ['Interactive hotspot map', 'Current versus historical fire activity', '7-day weather outlook', 'Regional hotspot counts'] },
+    { value: 'emergency-response', label: 'Emergency Response', description: 'Fire-weather conditions, recent anomalies, preparedness priorities, nearby incidents, and resource readiness.', insights: ['Regions with elevated fire-weather conditions', 'Recent hotspot activity and anomalies', '1–7 day fire-weather outlook', 'Regional preparedness priority indicators', 'Nearby reported fire incidents, if available', 'Suggested resource-readiness reviews'] },
+    { value: 'scientist', label: 'Scientists', description: 'Harmonization charts, historical anomalies, sensor calibration, and model validation.', insights: ['Before-and-after harmonization charts', 'Historical anomaly analysis', 'Sensor calibration and model validation'] },
+    { value: 'land-manager', label: 'Land Managers', description: 'Burning frequency, seasonal activity, land-cover overlays, and planning recommendations.', insights: ['Historical burning frequency by region', 'Seasonal hotspot activity calendar', 'Vegetation and land-cover overlays', 'Areas with recurring burning activity', 'Land management planning recommendations'] },
+    { value: 'firefighter', label: 'Firefighters', description: 'Current detections, confidence, fire radiative power, weather, and incident verification.', insights: ['Latest satellite hotspot detections', 'Hotspot coordinates and timestamps', 'Detection confidence and fire radiative power', 'Wind and weather overlays', 'Incident verification information'] },
   ],
 };
 

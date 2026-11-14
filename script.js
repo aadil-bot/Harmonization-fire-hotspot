@@ -7,12 +7,11 @@ const CONFIG = {
     // Add regions or province entries here as they become available.
   ],
   roles: [
-    { value: 'early-warning', label: 'Early Warning', description: 'Spot emerging activity and changing trends.' },
-    { value: 'emergency-response', label: 'Emergency Response', description: 'Support decisions during active incidents.' },
-    { value: 'scientist', label: 'Scientist', description: 'Explore patterns for research and analysis.' },
-    { value: 'land-manager', label: 'Land Manager', description: 'Understand fire activity across managed lands.' },
-    { value: 'firefighter', label: 'Firefighter', description: 'Get a wider view of recent and past hotspots.' },
-    { value: 'general-view', label: 'General View', description: 'Explore the data with a broad overview.' },
+    { value: 'general-view', label: 'General View', description: 'Interactive hotspot map, current versus historical fire activity, 7-day weather outlook, and regional hotspot counts.' },
+    { value: 'emergency-response', label: 'Emergency Response', description: 'Fire-weather conditions, recent hotspot activity and anomalies, preparedness indicators, nearby incidents, and resource-readiness reviews.' },
+    { value: 'scientist', label: 'Scientists', description: 'Before-and-after harmonization charts, historical anomaly analysis, sensor calibration, and model validation.' },
+    { value: 'land-manager', label: 'Land Managers', description: 'Burning frequency, seasonal hotspot calendar, vegetation and land-cover overlays, recurring activity, and planning recommendations.' },
+    { value: 'firefighter', label: 'Firefighters', description: 'Latest satellite detections, coordinates and timestamps, detection confidence and FRP, weather overlays, and incident verification.' },
   ],
 };
 
