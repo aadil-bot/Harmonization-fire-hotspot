@@ -1,4 +1,4 @@
-/* Role insights module. It inherits the FireWatch theme variables from map.css. */
+/* Role insights module. It inherits the MOSAIC theme variables from map.css. */
 #insights { min-width: 0; }
 .insights-module { position: relative; padding: 1px 2px 4px; }
 .insights-module-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-right: 82px; }
