@@ -190,3 +190,17 @@ body.map-maximized .map-panel { border-color: #48524b; }
 .map-data-controls span { color: #a2aaa3; max-width: 48%; text-align: right; }
 
 .fire-map-fallback { display:block; width:100%; height:100%; min-height:320px; }
+
+/* Keep the selected-year controls readable over the map on wide and narrow screens. */
+.map-data-controls { gap: 12px; padding: 10px 12px; font-size: 11px; line-height: 1.4; }
+.map-data-controls label, .map-data-controls output { flex: 0 0 auto; white-space: nowrap; }
+.map-data-controls input { min-width: 120px; }
+.map-data-controls span { max-width: 40%; font: 10px/1.45 var(--sans); }
+.map-legend { color: #d0d8d0; font-size: 9px; }
+.map-legend .legend-title { color: #b1bbb2; }
+.map-legend > span { gap: 6px; }
+@media (max-width: 640px) {
+  .map-data-controls { left: 8px; right: 8px; bottom: 8px; flex-wrap: wrap; gap: 6px 9px; padding: 8px; font-size: 10px; }
+  .map-data-controls input { flex: 1 1 120px; }
+  .map-data-controls span { flex: 1 0 100%; max-width: none; text-align: left; }
+}

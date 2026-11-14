@@ -3,19 +3,20 @@
 const CONFIG = {
   minDate: '2000-11-01',
   regions: [
-    { value: 'alberta', label: 'Alberta' },
-    { value: 'british-columbia', label: 'British Columbia' },
-    { value: 'manitoba', label: 'Manitoba' },
-    { value: 'new-brunswick', label: 'New Brunswick' },
-    { value: 'newfoundland-and-labrador', label: 'Newfoundland and Labrador' },
-    { value: 'northwest-territories', label: 'Northwest Territories' },
-    { value: 'nova-scotia', label: 'Nova Scotia' },
-    { value: 'nunavut', label: 'Nunavut' },
-    { value: 'ontario', label: 'Ontario' },
-    { value: 'prince-edward-island', label: 'Prince Edward Island' },
-    { value: 'quebec', label: 'Quebec' },
-    { value: 'saskatchewan', label: 'Saskatchewan' },
-    { value: 'yukon', label: 'Yukon' },  ],
+    { value: 'alberta', label: 'Alberta', provinceCode: '48' },
+    { value: 'british-columbia', label: 'British Columbia', provinceCode: '59' },
+    { value: 'manitoba', label: 'Manitoba', provinceCode: '46' },
+    { value: 'new-brunswick', label: 'New Brunswick', provinceCode: '13' },
+    { value: 'newfoundland-and-labrador', label: 'Newfoundland and Labrador', provinceCode: '10' },
+    { value: 'northwest-territories', label: 'Northwest Territories', provinceCode: '61' },
+    { value: 'nova-scotia', label: 'Nova Scotia', provinceCode: '12' },
+    { value: 'nunavut', label: 'Nunavut', provinceCode: '62' },
+    { value: 'ontario', label: 'Ontario', provinceCode: '35' },
+    { value: 'prince-edward-island', label: 'Prince Edward Island', provinceCode: '11' },
+    { value: 'quebec', label: 'Quebec', provinceCode: '24' },
+    { value: 'saskatchewan', label: 'Saskatchewan', provinceCode: '47' },
+    { value: 'yukon', label: 'Yukon', provinceCode: '60' },
+  ],
   roles: [
     { value: 'general-view', label: 'General View', description: 'Interactive hotspot map, current versus historical fire activity, 7-day weather outlook, and regional hotspot counts.', insights: ['Interactive hotspot map', 'Current versus historical fire activity', '7-day weather outlook', 'Regional hotspot counts'] },
     { value: 'emergency-response', label: 'Emergency Response', description: 'Fire-weather conditions, recent anomalies, preparedness priorities, nearby incidents, and resource readiness.', insights: ['Regions with elevated fire-weather conditions', 'Recent hotspot activity and anomalies', '1–7 day fire-weather outlook', 'Regional preparedness priority indicators', 'Nearby reported fire incidents, if available', 'Suggested resource-readiness reviews'] },
@@ -434,33 +435,299 @@ let mapRows = [];
 let initialYearRows = window.MOSAIC_YEAR_ROWS || null;
 let fireMap = null;
 let fireLayer = null;
+let fireBoundaryLayer = null;
 let mapRenderer = null;
 let requestedYear = 0;
-function fireColour(value) { const intensity=Math.min(1,Math.log1p(value)/Math.log(31)); return `rgba(255,${Math.round(105-intensity*75)},${Math.round(50-intensity*30)},${.4+intensity*.6})`; }
-function drawFireMap() {
+// Province shapes load on demand from Statistics Canada's 2021 generalized
+// province/territory boundaries; PRUID links each shape to the sidebar choice.
+let activeProvinceFeature = null;
+let activeProvinceIndex = null;
+let activeRegionValue = null;
+const provinceIndexes = new Map();
+const pendingProvinceLoads = new Map();
+
+function loadProvinceIndex(region) {
+  if (provinceIndexes.has(region.value)) return Promise.resolve(provinceIndexes.get(region.value));
+  if (pendingProvinceLoads.has(region.value)) return pendingProvinceLoads.get(region.value);
+
+  const load = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = `data/canada/provinces/${region.value}.js`;
+    script.onload = () => {
+      const feature = window.MOSAIC_PROVINCE_BOUNDARIES?.[region.provinceCode];
+      if (!feature) {
+        reject(new Error(`Boundary data missing for ${region.label}.`));
+        return;
+      }
+      const entry = { feature, index: makeProvinceIndex(feature) };
+      provinceIndexes.set(region.value, entry);
+      resolve(entry);
+    };
+    script.onerror = () => reject(new Error(`Could not load the ${region.label} boundary.`));
+    document.head.append(script);
+  }).finally(() => pendingProvinceLoads.delete(region.value));
+
+  pendingProvinceLoads.set(region.value, load);
+  return load;
+}
+
+function makeProvinceIndex(feature) {
+  if (!feature) return null;
+  const bucketSize = 0.5;
+  const buckets = new Map();
+  const polygons = [];
+  const bounds = { minLon: Infinity, minLat: Infinity, maxLon: -Infinity, maxLat: -Infinity };
+
+  feature.geometry.coordinates.forEach((rings) => {
+    const outer = rings[0];
+    if (!outer?.length) return;
+    const polygonBounds = { minLon: Infinity, minLat: Infinity, maxLon: -Infinity, maxLat: -Infinity };
+    outer.forEach(([lon, lat]) => {
+      polygonBounds.minLon = Math.min(polygonBounds.minLon, lon);
+      polygonBounds.maxLon = Math.max(polygonBounds.maxLon, lon);
+      polygonBounds.minLat = Math.min(polygonBounds.minLat, lat);
+      polygonBounds.maxLat = Math.max(polygonBounds.maxLat, lat);
+    });
+    bounds.minLon = Math.min(bounds.minLon, polygonBounds.minLon);
+    bounds.maxLon = Math.max(bounds.maxLon, polygonBounds.maxLon);
+    bounds.minLat = Math.min(bounds.minLat, polygonBounds.minLat);
+    bounds.maxLat = Math.max(bounds.maxLat, polygonBounds.maxLat);
+    const polygon = { rings, bounds: polygonBounds };
+    polygons.push(polygon);
+    for (let x = Math.floor(polygonBounds.minLon / bucketSize); x <= Math.floor(polygonBounds.maxLon / bucketSize); x += 1) {
+      for (let y = Math.floor(polygonBounds.minLat / bucketSize); y <= Math.floor(polygonBounds.maxLat / bucketSize); y += 1) {
+        const key = `${x}:${y}`;
+        if (!buckets.has(key)) buckets.set(key, []);
+        buckets.get(key).push(polygon);
+      }
+    }
+  });
+  return { buckets, polygons, bounds, bucketSize };
+}
+
+function pointInRing(lon, lat, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i, i += 1) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if ((yi > lat) !== (yj > lat) && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+function pointInProvince(lon, lat) {
+  if (!activeProvinceIndex) return false;
+  const { buckets, bucketSize } = activeProvinceIndex;
+  const candidates = buckets.get(`${Math.floor(lon / bucketSize)}:${Math.floor(lat / bucketSize)}`) || [];
+  return candidates.some((polygon) => {
+    const b = polygon.bounds;
+    if (lon < b.minLon || lon > b.maxLon || lat < b.minLat || lat > b.maxLat) return false;
+    if (!pointInRing(lon, lat, polygon.rings[0])) return false;
+    return !polygon.rings.slice(1).some((hole) => pointInRing(lon, lat, hole));
+  });
+}
+
+function setActiveProvince(shouldZoom = true) {
+  const region = CONFIG.regions.find((item) => item.value === state.region);
+  if (!region) return;
+  if (activeRegionValue === region.value) {
+    renderVisibleMap();
+    return;
+  }
+  activeRegionValue = region.value;
+  activeProvinceFeature = null;
+  activeProvinceIndex = null;
+  if (window.L && fireMap && fireBoundaryLayer) {
+    fireBoundaryLayer.clearLayers();
+  }
+  mapDataStatus.textContent = `Loading ${region.label} boundaries…`;
+  renderVisibleMap();
+
+  loadProvinceIndex(region).then((entry) => {
+    if (state.region !== region.value) return;
+    activeProvinceFeature = entry.feature;
+    activeProvinceIndex = entry.index;
+    if (window.L && fireMap && fireBoundaryLayer) {
+      const boundary = L.geoJSON(activeProvinceFeature, {
+        interactive: false,
+        style: { color: '#92a18f', weight: 1.2, opacity: 0.8, fillColor: '#405b45', fillOpacity: 0.13 },
+      });
+      boundary.addTo(fireBoundaryLayer);
+      if (shouldZoom) fireMap.fitBounds(boundary.getBounds(), { padding: [24, 24] });
+    }
+    renderVisibleMap();
+  }).catch(() => {
+    if (state.region === region.value) mapDataStatus.textContent = `Boundary data for ${region.label} could not be loaded.`;
+  });
+}
+
+function getVisibleRows() {
+  if (!activeProvinceIndex) return [];
+  return mapRows.filter((row) => {
+    const withinDateRange = (!row.last_fire || row.last_fire >= state.start) && (!row.first_fire || row.first_fire <= state.end);
+    return withinDateRange && pointInProvince(row.lon, row.lat);
+  });
+}
+
+function fireColour(value) {
+  const intensity = Math.min(1, Math.log1p(Number(value) || 0) / Math.log(31));
+  return { color: `rgb(255,${Math.round(105 - intensity * 75)},${Math.round(50 - intensity * 30)})`, opacity: .48 + intensity * .48 };
+}
+
+function drawFireMap(rows) {
   if (!fireMap || !fireLayer) return;
   fireLayer.clearLayers();
-  const year=Number(mapYear.value); const rows=mapRows;
-  rows.forEach(r=>L.rectangle([[r.lat-.05,r.lon-.05],[r.lat+.05,r.lon+.05]],{renderer:mapRenderer,stroke:false,fillColor:fireColour(r.harmonized_cells),fillOpacity:1}).bindPopup(`<strong>${r.year} · ${r.source}</strong><br>Harmonized fire days: ${r.harmonized_cells}<br>Observed fire days: ${r.fire_days}<br>Active: ${r.first_fire} → ${r.last_fire}<br>Total fire radiative power: ${r.frp_total_mw.toLocaleString()} MW<br>Peak day: ${r.peak_day}`).addTo(fireLayer));
-  mapYearValue.value=String(year); mapDataStatus.textContent=`${rows.length.toLocaleString()} fire cells · ${rows[0]?.source||'No records'} · harmonized scale`;
+  rows.forEach((row) => {
+    const colour = fireColour(row.harmonized_cells);
+    const radius = Math.min(6, 2.4 + Math.log1p(Number(row.harmonized_cells) || 0) * .55);
+    L.circleMarker([row.lat, row.lon], {
+      renderer: mapRenderer, radius, color: '#371e17', weight: .35,
+      fillColor: colour.color, fillOpacity: colour.opacity,
+    }).bindPopup(`<strong>${row.year} · ${row.source}</strong><br>Harmonized fire cells: ${row.harmonized_cells}<br>Observed fire days: ${row.fire_days}<br>Active: ${row.first_fire} → ${row.last_fire}<br>Total fire radiative power: ${Number(row.frp_total_mw).toLocaleString()} MW<br>Peak day: ${row.peak_day}`).addTo(fireLayer);
+  });
 }
-function showFallback(rows,year){
-  mapRows=rows; const host=document.querySelector('#fire-map');
-  if(fireMap){fireMap.remove();fireMap=null;fireLayer=null;}
-  let canvas=host.querySelector('canvas');if(!canvas){canvas=document.createElement('canvas');canvas.className='fire-map-fallback';host.replaceChildren(canvas);}
-  const ctx=canvas.getContext('2d');const box=canvas.getBoundingClientRect();const dpr=window.devicePixelRatio||1;canvas.width=Math.max(1,box.width*dpr);canvas.height=Math.max(1,box.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#142019';ctx.fillRect(0,0,box.width,box.height);
-  rows.forEach(r=>{const x=(r.lon+141.1)/88.5*box.width,y=(82.6-r.lat)/40.9*box.height,a=Math.min(1,.25+Math.log1p(r.harmonized_cells)/4);ctx.fillStyle=`rgba(255,75,36,${a})`;ctx.fillRect(x-3,y-3,6,6);});
-  mapYearValue.value=String(year);mapDataStatus.textContent=`${rows.length.toLocaleString()} fire cells · basemap unavailable; data-only view`;
+
+function drawFallback(rows) {
+  const host = document.querySelector('#fire-map');
+  let canvas = host.querySelector('canvas');
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    canvas.className = 'fire-map-fallback';
+    canvas.setAttribute('aria-hidden', 'true');
+    host.replaceChildren(canvas);
+  }
+  const ctx = canvas.getContext('2d');
+  const box = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.max(1, box.width * dpr);
+  canvas.height = Math.max(1, box.height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#142019';
+  ctx.fillRect(0, 0, box.width, box.height);
+
+  const bounds = activeProvinceIndex?.bounds || { minLon: -141.1, maxLon: -52.6, minLat: 41.7, maxLat: 82.6 };
+  const padding = 34;
+  const centerLat = (bounds.minLat + bounds.maxLat) / 2;
+  const xScaleFactor = Math.cos(centerLat * Math.PI / 180);
+  const projectX = (lon) => lon * xScaleFactor;
+  const xMin = projectX(bounds.minLon), xMax = projectX(bounds.maxLon);
+  const scale = Math.min((box.width - padding * 2) / Math.max(.01, xMax - xMin), (box.height - padding * 2) / Math.max(.01, bounds.maxLat - bounds.minLat));
+  const offsetX = (box.width - (xMax - xMin) * scale) / 2;
+  const offsetY = (box.height - (bounds.maxLat - bounds.minLat) * scale) / 2;
+  const project = ([lon, lat]) => [offsetX + (projectX(lon) - xMin) * scale, offsetY + (bounds.maxLat - lat) * scale];
+
+  if (activeProvinceFeature) {
+    ctx.beginPath();
+    activeProvinceFeature.geometry.coordinates.forEach((polygon) => {
+      polygon.forEach((ring) => {
+        ring.forEach((point, index) => {
+          const [x, y] = project(point);
+          if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.closePath();
+      });
+    });
+    ctx.fillStyle = '#1d3024';
+    ctx.fill('evenodd');
+    ctx.strokeStyle = '#80917f';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  rows.forEach((row) => {
+    const [x, y] = project([row.lon, row.lat]);
+    const level = fireColour(row.harmonized_cells);
+    const radius = Math.min(5.2, 1.8 + Math.log1p(Number(row.harmonized_cells) || 0) * .45);
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = level.color;
+    ctx.globalAlpha = level.opacity;
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
 }
-function loadYear(year){
-  requestedYear=year;mapDataStatus.textContent=`Loading ${year} fire cells…`;
-  const previous=document.querySelector('#map-year-data');if(previous)previous.remove();
-  if (initialYearRows && year === 2023) { const rows=initialYearRows.map(r=>({year:r[0],lat:r[1],lon:r[2],fire_days:r[3],harmonized_cells:r[4],frp_total_mw:r[5],first_fire:r[6],last_fire:r[7],source:r[8],peak_day:r[9]})); if(window.L&&fireMap){mapRows=rows;drawFireMap();}else showFallback(rows,year); return; }
-  window.MOSAIC_YEAR_ROWS=null;
-  const script=document.createElement('script');script.id='map-year-data';script.src=`data/map-years/${year}.js`;
-  script.onload=()=>{if(requestedYear!==year)return;const rows=(window.MOSAIC_YEAR_ROWS||[]).map(r=>({year:r[0],lat:r[1],lon:r[2],fire_days:r[3],harmonized_cells:r[4],frp_total_mw:r[5],first_fire:r[6],last_fire:r[7],source:r[8],peak_day:r[9]}));if(window.L&&fireMap){mapRows=rows;drawFireMap();}else showFallback(rows,year);};
-  script.onerror=()=>{if(requestedYear===year)mapDataStatus.textContent=`Could not load ${year} fire data. Confirm data/map-years/${year}.js is deployed.`;};document.head.append(script);
+
+function renderVisibleMap(shouldZoom = false) {
+  const rows = getVisibleRows();
+  const year = Number(mapYear.value);
+  if (window.L && fireMap && fireLayer) {
+    drawFireMap(rows);
+    if (shouldZoom && activeProvinceFeature && fireBoundaryLayer.getLayers().length) {
+      fireMap.fitBounds(fireBoundaryLayer.getLayers()[0].getBounds(), { padding: [24, 24] });
+    }
+  } else if (activeProvinceIndex) {
+    drawFallback(rows);
+  } else {
+    drawFallback([]);
+  }
+  const region = CONFIG.regions.find((item) => item.value === state.region)?.label || state.region;
+  mapYearValue.value = String(year);
+  if (activeProvinceIndex) mapDataStatus.textContent = `${rows.length.toLocaleString()} fire cells in ${region} · ${year} · ${rows[0]?.source || 'No matching records'}`;
 }
-if(window.L){fireMap=L.map('fire-map',{preferCanvas:true}).setView([58,-105],3);mapRenderer=L.canvas({padding:.5});L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(fireMap);fireLayer=L.layerGroup().addTo(fireMap);fireMap.fitBounds([[41.7,-141.1],[82.6,-52.6]]);window.addEventListener('resize',()=>fireMap&&fireMap.invalidateSize());}
-mapYear.addEventListener('input',()=>loadYear(Number(mapYear.value)));
-loadYear(Number(mapYear.value));document.querySelector('#download-csv').addEventListener('click',()=>{window.location.href='data/map_pins_yearly.csv';});
+
+function setRowsForYear(rows, year) {
+  mapRows = rows;
+  mapYearValue.value = String(year);
+  renderVisibleMap();
+}
+
+function loadYear(year) {
+  requestedYear = year;
+  mapDataStatus.textContent = `Loading ${year} fire cells…`;
+  const previous = document.querySelector('#map-year-data');
+  if (previous) previous.remove();
+  if (initialYearRows && year === 2023) {
+    const rows = initialYearRows.map((r) => ({ year: r[0], lat: r[1], lon: r[2], fire_days: r[3], harmonized_cells: r[4], frp_total_mw: r[5], first_fire: r[6], last_fire: r[7], source: r[8], peak_day: r[9] }));
+    setRowsForYear(rows, year);
+    return;
+  }
+  window.MOSAIC_YEAR_ROWS = null;
+  const script = document.createElement('script');
+  script.id = 'map-year-data';
+  script.src = `data/map-years/${year}.js`;
+  script.onload = () => {
+    if (requestedYear !== year) return;
+    const rows = (window.MOSAIC_YEAR_ROWS || []).map((r) => ({ year: r[0], lat: r[1], lon: r[2], fire_days: r[3], harmonized_cells: r[4], frp_total_mw: r[5], first_fire: r[6], last_fire: r[7], source: r[8], peak_day: r[9] }));
+    setRowsForYear(rows, year);
+  };
+  script.onerror = () => {
+    if (requestedYear === year) mapDataStatus.textContent = `Could not load ${year} fire data. Confirm data/map-years/${year}.js is deployed.`;
+  };
+  document.head.append(script);
+}
+
+if (window.L) {
+  fireMap = L.map('fire-map', { preferCanvas: true }).setView([53.5, -113.5], 5);
+  mapRenderer = L.canvas({ padding: .5 });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap contributors' }).addTo(fireMap);
+  fireBoundaryLayer = L.layerGroup().addTo(fireMap);
+  fireLayer = L.layerGroup().addTo(fireMap);
+  window.addEventListener('resize', () => fireMap && fireMap.invalidateSize());
+}
+
+window.addEventListener('filtersChanged', () => setActiveProvince(true));
+mapYear.addEventListener('input', () => loadYear(Number(mapYear.value)));
+setActiveProvince(true);
+loadYear(Number(mapYear.value));
+
+function csvValue(value) {
+  const text = String(value ?? '');
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function downloadVisibleCsv() {
+  const region = CONFIG.regions.find((item) => item.value === state.region)?.label || state.region;
+  const headers = ['Province or territory', 'Year', 'Latitude', 'Longitude', 'Harmonized fire cells', 'Observed fire days', 'Total fire radiative power (MW)', 'First fire date', 'Last fire date', 'Source', 'Peak day'];
+  const records = [headers, ...getVisibleRows().map((row) => [region, row.year, row.lat, row.lon, row.harmonized_cells, row.fire_days, row.frp_total_mw, row.first_fire, row.last_fire, row.source, row.peak_day])];
+  const csv = `\uFEFF${records.map((record) => record.map(csvValue).join(',')).join('\r\n')}`;
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${state.region}-${mapYear.value}-fire-hotspots.csv`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+document.querySelector('#download-csv').addEventListener('click', downloadVisibleCsv);
