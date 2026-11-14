@@ -431,6 +431,7 @@ const mapYear = document.querySelector('#map-year');
 const mapYearValue = document.querySelector('#map-year-value');
 const mapDataStatus = document.querySelector('#map-data-status');
 let mapRows = [];
+let initialYearRows = window.MOSAIC_YEAR_ROWS || null;
 let fireMap = null;
 let fireLayer = null;
 let mapRenderer = null;
@@ -454,6 +455,7 @@ function showFallback(rows,year){
 function loadYear(year){
   requestedYear=year;mapDataStatus.textContent=`Loading ${year} fire cells…`;
   const previous=document.querySelector('#map-year-data');if(previous)previous.remove();
+  if (initialYearRows && year === 2023) { const rows=initialYearRows.map(r=>({year:r[0],lat:r[1],lon:r[2],fire_days:r[3],harmonized_cells:r[4],frp_total_mw:r[5],first_fire:r[6],last_fire:r[7],source:r[8],peak_day:r[9]})); if(window.L&&fireMap){mapRows=rows;drawFireMap();}else showFallback(rows,year); return; }
   window.MOSAIC_YEAR_ROWS=null;
   const script=document.createElement('script');script.id='map-year-data';script.src=`data/map-years/${year}.js`;
   script.onload=()=>{if(requestedYear!==year)return;const rows=(window.MOSAIC_YEAR_ROWS||[]).map(r=>({year:r[0],lat:r[1],lon:r[2],fire_days:r[3],harmonized_cells:r[4],frp_total_mw:r[5],first_fire:r[6],last_fire:r[7],source:r[8],peak_day:r[9]}));if(window.L&&fireMap){mapRows=rows;drawFireMap();}else showFallback(rows,year);};
