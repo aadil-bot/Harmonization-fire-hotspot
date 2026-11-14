@@ -40,28 +40,20 @@
     };
   }
 
-  // Replace this mock with a data adapter later while retaining the same API.
-  // It creates deterministic daily counts so repeated renders are consistent.
+  // The supplied weekly calendar is a pre-harmonized Canada-wide series.
+  // Convert week totals to dated records for the existing monthly heatmap.
   if (typeof window.getFireData !== 'function') {
     window.getFireData = async function getFireData(region, start, end) {
       const records = [];
-      const startDate = new Date(`${start}T00:00:00Z`);
-      const endDate = new Date(`${end}T00:00:00Z`);
-      const regionSeed = Array.from(String(region)).reduce((sum, char) => sum + char.charCodeAt(0), 0);
-
-      for (let year = startDate.getUTCFullYear(); year <= endDate.getUTCFullYear(); year += 1) {
-        for (let month = 0; month < 12; month += 1) {
-          const seasonalValue = (year * 31 + (month + 1) * 17 + regionSeed * 11) % 37;
-          const eventCount = 2 + (seasonalValue % 5);
-          for (let eventIndex = 0; eventIndex < eventCount; eventIndex += 1) {
-            const day = 2 + eventIndex * 4;
-            const date = new Date(Date.UTC(year, month, day));
-            if (date < startDate || date > endDate) continue;
-            const count = 4 + ((year * 13 + (month + 1) * 23 + eventIndex * 29 + regionSeed * 7) % 85);
-            records.push({ date: date.toISOString().slice(0, 10), count });
-          }
-        }
-      }
+      (window.MOSAIC_CALENDAR_ROWS || []).forEach((row) => {
+        const year = row[0];
+        row.slice(1).forEach((value, index) => {
+          if (value == null) return;
+          const date = new Date(Date.UTC(year, 0, 1 + index * 7)).toISOString().slice(0, 10);
+          if (date >= start && date <= end) records.push({ date, count: value });
+        });
+      });
+      if (!records.length) throw new Error('Bundled Canadian activity calendar did not load');
       return records;
     };
   }
@@ -252,9 +244,9 @@
     if (section.hidden) return;
     const thisRender = ++renderNumber;
     const { region, start, end } = latestFilters;
-    regionLabel.textContent = region.replaceAll('-', ' ').toUpperCase();
+    regionLabel.textContent = 'CANADA · ' + region.replaceAll('-', ' ').toUpperCase();
     status.hidden = false;
-    status.textContent = 'Loading historical fire activity…';
+    status.textContent = 'Loading Canada-wide harmonized weekly activity…';
     gridWrap.hidden = true;
     legend.hidden = true;
     hideTooltip();

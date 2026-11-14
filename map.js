@@ -427,7 +427,25 @@ function setMapMaximized(maximized) {
 
 mapExpandButton.addEventListener('click', () => setMapMaximized(!state.mapMaximized));
 
-// No hotspot dataset is connected yet; announce that the export control is a placeholder.
-document.querySelector('#download-csv').addEventListener('click', () => {
-  statusMessage.textContent = 'CSV download will be available when the hotspot dataset is connected.';
-});
+const mapYear = document.querySelector('#map-year');
+const mapYearValue = document.querySelector('#map-year-value');
+const mapDataStatus = document.querySelector('#map-data-status');
+let mapRows = (window.MOSAIC_MAP_ROWS || []).map(r => ({year:r[0],lat:r[1],lon:r[2],fire_days:r[3],harmonized_cells:r[4],frp_total_mw:r[5],first_fire:r[6],last_fire:r[7],source:r[8],peak_day:r[9]}));
+let fireMap = null;
+let fireLayer = null;
+function fireColour(value) { const intensity=Math.min(1,Math.log1p(value)/Math.log(31)); return `rgba(255,${Math.round(105-intensity*75)},${Math.round(50-intensity*30)},${.4+intensity*.6})`; }
+function drawFireMap() {
+  if (!fireMap || !fireLayer) return;
+  fireLayer.clearLayers();
+  const year=Number(mapYear.value); const rows=mapRows.filter(r=>r.year===year);
+  rows.forEach(r=>L.rectangle([[r.lat-.05,r.lon-.05],[r.lat+.05,r.lon+.05]],{renderer:L.canvas(),stroke:false,fillColor:fireColour(r.harmonized_cells),fillOpacity:1}).bindPopup(`<strong>${r.year} · ${r.source}</strong><br>Harmonized fire days: ${r.harmonized_cells}<br>Observed fire days: ${r.fire_days}<br>Active: ${r.first_fire} → ${r.last_fire}<br>Total fire radiative power: ${r.frp_total_mw.toLocaleString()} MW<br>Peak day: ${r.peak_day}`).addTo(fireLayer));
+  mapYearValue.value=String(year); mapDataStatus.textContent=`${rows.length.toLocaleString()} fire cells · ${rows[0]?.source||'No records'} · harmonized scale`;
+}
+if (window.MOSAIC_MAP_ROWS?.length && window.L) {
+  fireMap=L.map('fire-map',{preferCanvas:true}).setView([58,-105],3);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(fireMap);
+  fireLayer=L.layerGroup().addTo(fireMap); fireMap.fitBounds([[41.7,-141.1],[82.6,-52.6]]);
+  mapYear.addEventListener('input',drawFireMap); drawFireMap();
+  window.addEventListener('resize',()=>fireMap.invalidateSize());
+} else mapDataStatus.textContent='Map library or bundled fire data did not load.';
+document.querySelector('#download-csv').addEventListener('click',()=>{window.location.href='data/map_pins_yearly.csv';});

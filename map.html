@@ -8,7 +8,11 @@
   <title>MOSAIC — Fire activity map</title>
   <link rel="stylesheet" href="calendar.css">
   <link rel="stylesheet" href="map.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
   <link rel="stylesheet" href="insights.css">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous" defer></script>
+  <script src="map-data.js" defer></script>
+  <script src="calendar-data.js" defer></script>
   <script src="map.js" defer></script>
   <script src="calendar.js" defer></script>
   <script src="insights.js" defer></script>
@@ -32,7 +36,7 @@
           </button>
           <div id="menu" class="menu" role="menu" aria-label="Main views" hidden>
             <button class="menu-item is-active" id="menu-map" type="button" role="menuitem" data-view="map" aria-current="page">Map view</button>
-            <button class="menu-item" id="menu-calendar" type="button" role="menuitem" data-view="calendar">Calendar view (with predictions)</button>
+            <button class="menu-item" id="menu-calendar" type="button" role="menuitem" data-view="calendar">Historical activity calendar</button>
             <button class="menu-item" id="menu-compare" type="button" role="menuitem" data-view="compare">Regional comparison</button>
             <button class="menu-item" id="menu-live" type="button" role="menuitem" data-view="live">Live hotspot detections</button>
           </div>
@@ -82,8 +86,8 @@
         <section class="content-view map-view" id="view-map" aria-label="Map view">
         <section class="map-panel" aria-label="Fire hotspot map">
           <div class="map-topline"><div><span class="live-dot" aria-hidden="true"></span><span id="map-region-label">ALBERTA</span></div><div class="map-topline-actions"><span class="map-layer-label">ACTIVE FIRE HOTSPOTS <span>·</span> MODIS + VIIRS</span><button id="map-expand" class="map-expand-button" type="button" aria-label="Maximize map" aria-pressed="false" title="Maximize map"><span aria-hidden="true">⛶</span></button></div></div>
-          <div id="map" role="region" aria-label="Map placeholder"><div class="map-placeholder"><span class="map-crosshair" aria-hidden="true">⌖</span><strong>Map goes here</strong><span>The interactive fire activity map will appear here.</span></div></div>
-          <div class="map-legend" aria-label="Map legend"><span class="legend-title">DETECTION CONFIDENCE</span><span><i class="legend-dot low"></i>LOW</span><span><i class="legend-dot medium"></i>MEDIUM</span><span><i class="legend-dot high"></i>HIGH</span></div>
+          <div class="map-data-controls"><label for="map-year">Map year</label><input id="map-year" type="range" min="2002" max="2025" value="2023"><output id="map-year-value" for="map-year">2023</output><span id="map-data-status" role="status">Loading Canadian fire cells…</span></div><div id="fire-map" role="region" aria-label="Interactive map of Canadian harmonized fire activity"></div>
+          <div class="map-legend" aria-label="Map legend"><span class="legend-title">HARMONIZED FIRE DAYS</span><span><i class="legend-dot low"></i>LOW</span><span><i class="legend-dot medium"></i>MEDIUM</span><span><i class="legend-dot high"></i>HIGH</span></div>
         </section>
 
         <section class="insights-panel" aria-labelledby="insights-title">
@@ -98,7 +102,7 @@
               <div><p class="eyebrow">SEASONAL PATTERNS</p><h1 id="calendar-title">Historical fire activity calendar</h1></div>
               <span id="calendar-region" class="calendar-region">ALBERTA</span>
             </div>
-            <p class="calendar-description">Monthly fire detections across the selected time range.</p>
+            <p class="calendar-description">Canada-wide weekly harmonized activity grouped by month. The provided calendar dataset covers all of Canada.</p>
             <div id="calendar-status" class="calendar-status" role="status" aria-live="polite">Choose the calendar view to load fire activity.</div>
             <div id="calendar-grid-wrap" class="calendar-grid-wrap" hidden>
               <table id="calendar-grid" class="calendar-grid" aria-label="Historical monthly fire activity by year">
