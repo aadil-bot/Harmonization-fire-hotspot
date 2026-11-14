@@ -3,9 +3,19 @@
 const CONFIG = {
   minDate: '2000-11-01',
   regions: [
-    { value: 'dr-congo', label: 'DR Congo' },
-    // Add regions or province entries here as they become available.
-  ],
+    { value: 'alberta', label: 'Alberta' },
+    { value: 'british-columbia', label: 'British Columbia' },
+    { value: 'manitoba', label: 'Manitoba' },
+    { value: 'new-brunswick', label: 'New Brunswick' },
+    { value: 'newfoundland-and-labrador', label: 'Newfoundland and Labrador' },
+    { value: 'northwest-territories', label: 'Northwest Territories' },
+    { value: 'nova-scotia', label: 'Nova Scotia' },
+    { value: 'nunavut', label: 'Nunavut' },
+    { value: 'ontario', label: 'Ontario' },
+    { value: 'prince-edward-island', label: 'Prince Edward Island' },
+    { value: 'quebec', label: 'Quebec' },
+    { value: 'saskatchewan', label: 'Saskatchewan' },
+    { value: 'yukon', label: 'Yukon' },  ],
   roles: [
     { value: 'general-view', label: 'General View', description: 'Interactive hotspot map, current versus historical fire activity, 7-day weather outlook, and regional hotspot counts.' },
     { value: 'emergency-response', label: 'Emergency Response', description: 'Fire-weather conditions, recent hotspot activity and anomalies, preparedness indicators, nearby incidents, and resource-readiness reviews.' },

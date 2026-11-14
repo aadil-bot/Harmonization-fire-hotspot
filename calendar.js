@@ -33,7 +33,7 @@
 
   function readCurrentFilters() {
     return {
-      region: document.querySelector('#region')?.value || 'dr-congo',
+      region: document.querySelector('#region')?.value || 'alberta',
       start: document.querySelector('#start')?.value || '2000-11-01',
       end: document.querySelector('#end')?.value || new Date().toISOString().slice(0, 10),
       role: document.querySelector('#role')?.value || 'general-view',
@@ -161,6 +161,23 @@
         row.append(cell);
       });
       rows.append(row);
+      if (year === 2011 && year < monthData.lastYear && monthData.firstYear <= 2011) {
+        const markerRow = document.createElement('tr');
+        markerRow.className = 'sensor-start-row';
+        markerRow.setAttribute('aria-label', 'VIIRS observations begin after 2011');
+        const markerCell = document.createElement('td');
+        markerCell.colSpan = 13;
+        const marker = document.createElement('span');
+        marker.className = 'sensor-start-marker';
+        marker.textContent = 'MODIS → VIIRS';
+        marker.title = 'VIIRS observations begin after 2011; MODIS observations continue across the transition.';
+        marker.tabIndex = 0;
+        marker.setAttribute('role', 'note');
+        marker.setAttribute('aria-label', marker.title);
+        markerCell.append(marker);
+        markerRow.append(markerCell);
+        rows.append(markerRow);
+      }
     }
     body.replaceChildren(rows);
   }
@@ -182,6 +199,16 @@
     tooltip.style.top = `${Math.max(gridWrap.scrollTop + 4, top)}px`;
   }
 
+  function placeSensorTooltip(marker) {
+    if (!tooltip) return;
+    tooltip.textContent = 'MODIS → VIIRS: VIIRS observations begin after 2011.';
+    tooltip.hidden = false;
+    const wrapRect = gridWrap.getBoundingClientRect();
+    const markerRect = marker.getBoundingClientRect();
+    tooltip.style.left = `${Math.max(6, Math.min(markerRect.left - wrapRect.left, gridWrap.clientWidth - tooltip.offsetWidth - 6))}px`;
+    tooltip.style.top = `${Math.max(gridWrap.scrollTop + 4, markerRect.bottom - wrapRect.top + gridWrap.scrollTop + 5)}px`;
+  }
+
   function hideTooltip() {
     activeCell = null;
     tooltip.hidden = true;
@@ -189,12 +216,20 @@
 
   function connectTooltips() {
     table.addEventListener('pointerover', (event) => {
+      const marker = event.target.closest('.sensor-start-marker');
+      if (marker) {
+        activeCell = marker;
+        placeSensorTooltip(marker);
+        return;
+      }
       const cell = event.target.closest('.calendar-cell');
       if (!cell || cell === activeCell) return;
       activeCell = cell;
       placeTooltip(cell);
     });
     table.addEventListener('pointerout', (event) => {
+      const marker = event.target.closest('.sensor-start-marker');
+      if (marker && !marker.contains(event.relatedTarget)) hideTooltip();
       const cell = event.target.closest('.calendar-cell');
       if (cell && !cell.contains(event.relatedTarget) && document.activeElement !== cell) hideTooltip();
     });

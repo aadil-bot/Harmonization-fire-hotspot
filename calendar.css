@@ -49,3 +49,6 @@
   .calendar-cell { height: 20px; border-radius: 3px; }
   .calendar-legend { max-width: 250px; margin-top: 15px; }
 }
+
+.calendar-grid tr.sensor-start-row td { height: 2px; padding: 0; border: 0; border-top: 2px solid #55aaff; text-align: right; line-height: 0; }
+.sensor-start-marker { position: relative; top: -7px; display: inline-block; padding: 0 4px; color: #8fc8ff; background: #171c19; font: 7px/10px var(--mono); letter-spacing: .08em; vertical-align: top; }

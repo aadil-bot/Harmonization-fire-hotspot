@@ -3,8 +3,19 @@
 const CONFIG = {
   minDate: '2000-11-01',
   regions: [
-    { value: 'dr-congo', label: 'DR Congo' },
-  ],
+    { value: 'alberta', label: 'Alberta' },
+    { value: 'british-columbia', label: 'British Columbia' },
+    { value: 'manitoba', label: 'Manitoba' },
+    { value: 'new-brunswick', label: 'New Brunswick' },
+    { value: 'newfoundland-and-labrador', label: 'Newfoundland and Labrador' },
+    { value: 'northwest-territories', label: 'Northwest Territories' },
+    { value: 'nova-scotia', label: 'Nova Scotia' },
+    { value: 'nunavut', label: 'Nunavut' },
+    { value: 'ontario', label: 'Ontario' },
+    { value: 'prince-edward-island', label: 'Prince Edward Island' },
+    { value: 'quebec', label: 'Quebec' },
+    { value: 'saskatchewan', label: 'Saskatchewan' },
+    { value: 'yukon', label: 'Yukon' },  ],
   roles: [
     { value: 'general-view', label: 'General View', description: 'Interactive hotspot map, current versus historical fire activity, 7-day weather outlook, and regional hotspot counts.', insights: ['Interactive hotspot map', 'Current versus historical fire activity', '7-day weather outlook', 'Regional hotspot counts'] },
     { value: 'emergency-response', label: 'Emergency Response', description: 'Fire-weather conditions, recent anomalies, preparedness priorities, nearby incidents, and resource readiness.', insights: ['Regions with elevated fire-weather conditions', 'Recent hotspot activity and anomalies', '1–7 day fire-weather outlook', 'Regional preparedness priority indicators', 'Nearby reported fire incidents, if available', 'Suggested resource-readiness reviews'] },
@@ -15,7 +26,7 @@ const CONFIG = {
 };
 
 // This object is the live page state shared with map and calendar modules.
-const state = { region: 'dr-congo', start: '', end: '', role: 'general-view', view: 'map', mapMaximized: false, mobileSidebarOpen: false, sidebarWidth: null };
+const state = { region: 'alberta', start: '', end: '', role: 'general-view', view: 'map', mapMaximized: false, mobileSidebarOpen: false, sidebarWidth: null };
 
 const controls = {
   start: document.querySelector('#start'),
