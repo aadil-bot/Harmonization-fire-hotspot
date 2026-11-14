@@ -430,22 +430,35 @@ mapExpandButton.addEventListener('click', () => setMapMaximized(!state.mapMaximi
 const mapYear = document.querySelector('#map-year');
 const mapYearValue = document.querySelector('#map-year-value');
 const mapDataStatus = document.querySelector('#map-data-status');
-let mapRows = (window.MOSAIC_MAP_ROWS || []).map(r => ({year:r[0],lat:r[1],lon:r[2],fire_days:r[3],harmonized_cells:r[4],frp_total_mw:r[5],first_fire:r[6],last_fire:r[7],source:r[8],peak_day:r[9]}));
+let mapRows = [];
 let fireMap = null;
 let fireLayer = null;
+let mapRenderer = null;
+let requestedYear = 0;
 function fireColour(value) { const intensity=Math.min(1,Math.log1p(value)/Math.log(31)); return `rgba(255,${Math.round(105-intensity*75)},${Math.round(50-intensity*30)},${.4+intensity*.6})`; }
 function drawFireMap() {
   if (!fireMap || !fireLayer) return;
   fireLayer.clearLayers();
-  const year=Number(mapYear.value); const rows=mapRows.filter(r=>r.year===year);
-  rows.forEach(r=>L.rectangle([[r.lat-.05,r.lon-.05],[r.lat+.05,r.lon+.05]],{renderer:L.canvas(),stroke:false,fillColor:fireColour(r.harmonized_cells),fillOpacity:1}).bindPopup(`<strong>${r.year} · ${r.source}</strong><br>Harmonized fire days: ${r.harmonized_cells}<br>Observed fire days: ${r.fire_days}<br>Active: ${r.first_fire} → ${r.last_fire}<br>Total fire radiative power: ${r.frp_total_mw.toLocaleString()} MW<br>Peak day: ${r.peak_day}`).addTo(fireLayer));
+  const year=Number(mapYear.value); const rows=mapRows;
+  rows.forEach(r=>L.rectangle([[r.lat-.05,r.lon-.05],[r.lat+.05,r.lon+.05]],{renderer:mapRenderer,stroke:false,fillColor:fireColour(r.harmonized_cells),fillOpacity:1}).bindPopup(`<strong>${r.year} · ${r.source}</strong><br>Harmonized fire days: ${r.harmonized_cells}<br>Observed fire days: ${r.fire_days}<br>Active: ${r.first_fire} → ${r.last_fire}<br>Total fire radiative power: ${r.frp_total_mw.toLocaleString()} MW<br>Peak day: ${r.peak_day}`).addTo(fireLayer));
   mapYearValue.value=String(year); mapDataStatus.textContent=`${rows.length.toLocaleString()} fire cells · ${rows[0]?.source||'No records'} · harmonized scale`;
 }
-if (window.MOSAIC_MAP_ROWS?.length && window.L) {
-  fireMap=L.map('fire-map',{preferCanvas:true}).setView([58,-105],3);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(fireMap);
-  fireLayer=L.layerGroup().addTo(fireMap); fireMap.fitBounds([[41.7,-141.1],[82.6,-52.6]]);
-  mapYear.addEventListener('input',drawFireMap); drawFireMap();
-  window.addEventListener('resize',()=>fireMap.invalidateSize());
-} else mapDataStatus.textContent='Map library or bundled fire data did not load.';
-document.querySelector('#download-csv').addEventListener('click',()=>{window.location.href='data/map_pins_yearly.csv';});
+function showFallback(rows,year){
+  mapRows=rows; const host=document.querySelector('#fire-map');
+  if(fireMap){fireMap.remove();fireMap=null;fireLayer=null;}
+  let canvas=host.querySelector('canvas');if(!canvas){canvas=document.createElement('canvas');canvas.className='fire-map-fallback';host.replaceChildren(canvas);}
+  const ctx=canvas.getContext('2d');const box=canvas.getBoundingClientRect();const dpr=window.devicePixelRatio||1;canvas.width=Math.max(1,box.width*dpr);canvas.height=Math.max(1,box.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#142019';ctx.fillRect(0,0,box.width,box.height);
+  rows.forEach(r=>{const x=(r.lon+141.1)/88.5*box.width,y=(82.6-r.lat)/40.9*box.height,a=Math.min(1,.25+Math.log1p(r.harmonized_cells)/4);ctx.fillStyle=`rgba(255,75,36,${a})`;ctx.fillRect(x-3,y-3,6,6);});
+  mapYearValue.value=String(year);mapDataStatus.textContent=`${rows.length.toLocaleString()} fire cells · basemap unavailable; data-only view`;
+}
+function loadYear(year){
+  requestedYear=year;mapDataStatus.textContent=`Loading ${year} fire cells…`;
+  const previous=document.querySelector('#map-year-data');if(previous)previous.remove();
+  window.MOSAIC_YEAR_ROWS=null;
+  const script=document.createElement('script');script.id='map-year-data';script.src=`data/map-years/${year}.js`;
+  script.onload=()=>{if(requestedYear!==year)return;const rows=(window.MOSAIC_YEAR_ROWS||[]).map(r=>({year:r[0],lat:r[1],lon:r[2],fire_days:r[3],harmonized_cells:r[4],frp_total_mw:r[5],first_fire:r[6],last_fire:r[7],source:r[8],peak_day:r[9]}));if(window.L&&fireMap){mapRows=rows;drawFireMap();}else showFallback(rows,year);};
+  script.onerror=()=>{if(requestedYear===year)mapDataStatus.textContent=`Could not load ${year} fire data. Confirm data/map-years/${year}.js is deployed.`;};document.head.append(script);
+}
+if(window.L){fireMap=L.map('fire-map',{preferCanvas:true}).setView([58,-105],3);mapRenderer=L.canvas({padding:.5});L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(fireMap);fireLayer=L.layerGroup().addTo(fireMap);fireMap.fitBounds([[41.7,-141.1],[82.6,-52.6]]);window.addEventListener('resize',()=>fireMap&&fireMap.invalidateSize());}
+mapYear.addEventListener('input',()=>loadYear(Number(mapYear.value)));
+loadYear(Number(mapYear.value));document.querySelector('#download-csv').addEventListener('click',()=>{window.location.href='data/map_pins_yearly.csv';});
