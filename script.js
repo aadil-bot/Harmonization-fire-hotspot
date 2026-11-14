@@ -1,0 +1,116 @@
+// Keep the date bounds and selectable options together so the page can grow
+// without changing the form's validation and navigation logic.
+const CONFIG = {
+  minDate: '2000-11-01',
+  regions: [
+    { value: 'dr-congo', label: 'DR Congo' },
+    // Add regions or province entries here as they become available.
+  ],
+  roles: [
+    { value: 'early-warning', label: 'Early Warning', description: 'Spot emerging activity and changing trends.' },
+    { value: 'emergency-response', label: 'Emergency Response', description: 'Support decisions during active incidents.' },
+    { value: 'scientist', label: 'Scientist', description: 'Explore patterns for research and analysis.' },
+    { value: 'land-manager', label: 'Land Manager', description: 'Understand fire activity across managed lands.' },
+    { value: 'firefighter', label: 'Firefighter', description: 'Get a wider view of recent and past hotspots.' },
+    { value: 'general-view', label: 'General View', description: 'Explore the data with a broad overview.' },
+  ],
+};
+
+const form = document.querySelector('#setup-form');
+const startInput = document.querySelector('#start');
+const endInput = document.querySelector('#end');
+const regionSelect = document.querySelector('#region');
+const roleSelect = document.querySelector('#role');
+const errorMessage = document.querySelector('#form-error');
+
+// Use the visitor's local calendar date as the latest selectable date.
+function getLocalDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function populateOptions(select, options, formatOption) {
+  options.forEach((option) => {
+    const element = document.createElement('option');
+    element.value = option.value;
+    element.textContent = formatOption(option);
+    select.append(element);
+  });
+}
+
+const today = getLocalDateString();
+startInput.min = CONFIG.minDate;
+startInput.max = today;
+endInput.min = CONFIG.minDate;
+endInput.max = today;
+
+populateOptions(regionSelect, CONFIG.regions, (region) => region.label);
+populateOptions(roleSelect, CONFIG.roles, (role) => `${role.label} — ${role.description}`);
+
+// Preselect a useful recent window while respecting the supported date range.
+const defaultStart = new Date();
+defaultStart.setFullYear(defaultStart.getFullYear() - 1);
+const defaultStartString = getLocalDateString(defaultStart);
+startInput.value = defaultStartString < CONFIG.minDate ? CONFIG.minDate : defaultStartString;
+endInput.value = today;
+
+function showError(message, focusTarget) {
+  errorMessage.textContent = message;
+  errorMessage.hidden = false;
+  if (focusTarget) focusTarget.focus();
+}
+
+function clearError() {
+  errorMessage.textContent = '';
+  errorMessage.hidden = true;
+}
+
+form.addEventListener('submit', (event) => {
+  event.preventDefault();
+  clearError();
+
+  const start = startInput.value;
+  const end = endInput.value;
+  const dates = [
+    { input: startInput, value: start, label: 'Start date' },
+    { input: endInput, value: end, label: 'End date' },
+  ];
+
+  for (const date of dates) {
+    if (!date.value) {
+      showError(`Please choose a ${date.label.toLowerCase()}.`, date.input);
+      return;
+    }
+    if (date.value < CONFIG.minDate || date.value > today) {
+      showError(`${date.label} must be between November 1, 2000 and today.`, date.input);
+      return;
+    }
+  }
+
+  if (start > end) {
+    showError('Start date must be on or before the end date.', startInput);
+    return;
+  }
+  if (!CONFIG.regions.some((region) => region.value === regionSelect.value)) {
+    showError('Please choose an available region.', regionSelect);
+    return;
+  }
+  if (!CONFIG.roles.some((role) => role.value === roleSelect.value)) {
+    showError('Please choose a role.', roleSelect);
+    return;
+  }
+
+  const params = new URLSearchParams({
+    region: regionSelect.value,
+    start,
+    end,
+    role: roleSelect.value,
+  });
+  window.location.href = `map.html?${params.toString()}`;
+});
+
+// Clear stale errors as soon as the user edits a field.
+form.addEventListener('input', clearError);
+form.addEventListener('change', clearError);
