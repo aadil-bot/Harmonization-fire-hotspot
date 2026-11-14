@@ -15,7 +15,7 @@ const CONFIG = {
 };
 
 // This object is the live page state shared with map and calendar modules.
-const state = { region: 'dr-congo', start: '', end: '', role: 'general-view', view: 'map' };
+const state = { region: 'dr-congo', start: '', end: '', role: 'general-view', view: 'map', mapMaximized: false, mobileSidebarOpen: false, sidebarWidth: null };
 
 const controls = {
   start: document.querySelector('#start'),
@@ -26,6 +26,8 @@ const controls = {
 const errorBox = document.querySelector('#filter-error');
 const statusMessage = document.querySelector('#status-message');
 const dateSummary = document.querySelector('#date-summary');
+// Resolve this before the initial view switch, which may also reset map maximize.
+const mapExpandButton = document.querySelector('#map-expand');
 
 function localDateString(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -103,6 +105,10 @@ function applyControlChange(changedControl) {
 function setupFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const today = localDateString();
+  const requestedView = params.get('view');
+  // Only the map and calendar are welcome-page entry points; fall back safely
+  // so initialization uses the same view-switching path as the menu.
+  state.view = ['map', 'calendar'].includes(requestedView) ? requestedView : 'map';
   const requestedStart = params.get('start') || '';
   const requestedEnd = params.get('end') || '';
   const validRegion = CONFIG.regions.some((item) => item.value === params.get('region'));
@@ -139,25 +145,179 @@ Object.values(controls).forEach((control) => {
   control.addEventListener('change', () => applyControlChange(control));
 });
 
-// Mobile filter drawer: keep the button state and scrim in sync.
+// Sidebar resizing is independent from map maximize state. On phones, the
+// existing top-bar button controls the overlay drawer instead.
 const drawerToggle = document.querySelector('#drawer-toggle');
 const drawerClose = document.querySelector('#drawer-close');
 const drawerScrim = document.querySelector('#drawer-scrim');
+const workspace = document.querySelector('.workspace');
+const sidebar = document.querySelector('#sidebar');
+const sidebarContent = document.querySelector('#sidebar-content');
+const sidebarResizeHandle = document.querySelector('#sidebar-resize-handle');
+const mobileMediaQuery = window.matchMedia('(max-width: 767px)');
+const SIDEBAR_WIDTH_STORAGE_KEY = 'mosaic-sidebar-width';
+let layoutEventTimer;
 
-function setDrawerOpen(open) {
-  document.body.classList.toggle('drawer-open', open);
-  drawerToggle.setAttribute('aria-expanded', String(open));
-  drawerToggle.setAttribute('aria-label', open ? 'Close filters' : 'Open filters');
-  drawerScrim.hidden = !open;
-  if (open) drawerClose.focus();
-  else drawerToggle.focus();
+function isMobileLayout() {
+  return mobileMediaQuery.matches;
 }
 
-drawerToggle.addEventListener('click', () => setDrawerOpen(true));
+function updateSidebarButtons() {
+  const label = state.mobileSidebarOpen ? 'Close filters' : 'Open filters';
+  drawerToggle.setAttribute('aria-expanded', String(isMobileLayout() && state.mobileSidebarOpen));
+  drawerToggle.setAttribute('aria-label', label);
+  drawerToggle.title = label;
+  const currentWidth = state.sidebarWidth || Math.round(sidebar.getBoundingClientRect().width);
+  sidebarResizeHandle.setAttribute('aria-valuenow', String(currentWidth));
+}
+
+function persistSidebarState() {
+  try {
+    if (state.sidebarWidth) localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(state.sidebarWidth));
+  } catch (error) {
+    // Storage can be unavailable in private or restricted browsing contexts.
+  }
+}
+
+function announceLayoutChange() {
+  window.dispatchEvent(new CustomEvent('layoutChanged', {
+    detail: {
+      mobileSidebarOpen: state.mobileSidebarOpen,
+      mapMaximized: state.mapMaximized,
+      sidebarWidth: state.sidebarWidth || Math.round(sidebar.getBoundingClientRect().width),
+    },
+  }));
+  window.dispatchEvent(new Event('resize'));
+}
+
+function scheduleLayoutChange() {
+  window.clearTimeout(layoutEventTimer);
+  // Fallback covers reduced-motion styles and browsers that skip transitionend.
+  layoutEventTimer = window.setTimeout(announceLayoutChange, 320);
+}
+
+function setDrawerOpen(open) {
+  state.mobileSidebarOpen = open;
+  document.body.classList.toggle('drawer-open', open);
+  drawerScrim.hidden = !open;
+  sidebarContent.inert = !open;
+  updateSidebarButtons();
+  scheduleLayoutChange();
+  if (open) drawerClose.focus();
+  else if (document.activeElement !== drawerToggle) drawerToggle.focus();
+}
+
+function toggleSidebar() {
+  setDrawerOpen(!state.mobileSidebarOpen);
+}
+
+// Restore the last desktop width. The mobile drawer always starts closed.
+try {
+  const savedWidth = Number(localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY));
+  if (Number.isFinite(savedWidth) && savedWidth >= 200 && savedWidth <= 420) state.sidebarWidth = savedWidth;
+} catch (error) {
+  state.sidebarWidth = null;
+}
+if (state.sidebarWidth) workspace.style.setProperty('--sidebar-width', `${state.sidebarWidth}px`);
+sidebarContent.inert = isMobileLayout();
+state.mobileSidebarOpen = false;
+drawerScrim.hidden = true;
+updateSidebarButtons();
+
+drawerToggle.addEventListener('click', toggleSidebar);
+
+// Drag the divider to resize the desktop sidebar; arrow keys resize it too.
+let resizePointerActive = false;
+let resizeStartX = 0;
+let resizeStartWidth = 0;
+
+function setSidebarWidth(width) {
+  const maxWidth = Math.max(200, Math.min(420, window.innerWidth - 280));
+  state.sidebarWidth = Math.round(Math.max(200, Math.min(maxWidth, width)));
+  workspace.style.setProperty('--sidebar-width', `${state.sidebarWidth}px`);
+  sidebarResizeHandle.setAttribute('aria-valuemax', String(maxWidth));
+  sidebarResizeHandle.setAttribute('aria-valuenow', String(state.sidebarWidth));
+  updateSidebarButtons();
+}
+
+sidebarResizeHandle.addEventListener('pointerdown', (event) => {
+  if (isMobileLayout() || event.button !== 0) return;
+  event.preventDefault();
+  resizePointerActive = true;
+  resizeStartX = event.clientX;
+  workspace.classList.add('is-resizing');
+  resizeStartWidth = sidebar.getBoundingClientRect().width;
+  sidebarResizeHandle.setPointerCapture(event.pointerId);
+});
+
+sidebarResizeHandle.addEventListener('pointermove', (event) => {
+  if (!resizePointerActive) return;
+  setSidebarWidth(resizeStartWidth + event.clientX - resizeStartX);
+});
+
+function finishSidebarResize(event) {
+  if (!resizePointerActive) return;
+  resizePointerActive = false;
+  workspace.classList.remove('is-resizing');
+  persistSidebarState();
+  updateSidebarButtons();
+  window.clearTimeout(layoutEventTimer);
+  announceLayoutChange();
+  if (sidebarResizeHandle.hasPointerCapture(event.pointerId)) sidebarResizeHandle.releasePointerCapture(event.pointerId);
+}
+
+sidebarResizeHandle.addEventListener('pointerup', finishSidebarResize);
+sidebarResizeHandle.addEventListener('pointercancel', finishSidebarResize);
+sidebarResizeHandle.addEventListener('lostpointercapture', finishSidebarResize);
+
+sidebarResizeHandle.addEventListener('keydown', (event) => {
+  const currentWidth = state.sidebarWidth || sidebar.getBoundingClientRect().width;
+  let nextWidth;
+  if (event.key === 'ArrowLeft') nextWidth = currentWidth - 16;
+  else if (event.key === 'ArrowRight') nextWidth = currentWidth + 16;
+  else if (event.key === 'Home') nextWidth = 200;
+  else if (event.key === 'End') nextWidth = 420;
+  else return;
+  event.preventDefault();
+  setSidebarWidth(nextWidth);
+  persistSidebarState();
+  scheduleLayoutChange();
+});
 drawerClose.addEventListener('click', () => setDrawerOpen(false));
 drawerScrim.addEventListener('click', () => setDrawerOpen(false));
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && document.body.classList.contains('drawer-open')) setDrawerOpen(false);
+  if (event.key === 'Escape' && state.mobileSidebarOpen) {
+    setDrawerOpen(false);
+  }
+});
+
+document.addEventListener('click', (event) => {
+  if (state.mobileSidebarOpen && !sidebar.contains(event.target) && !drawerToggle.contains(event.target)) {
+    setDrawerOpen(false);
+  }
+});
+
+// Dispatch once at the end of the relevant CSS transition, with a reduced-motion fallback.
+workspace.addEventListener('transitionend', (event) => {
+  if (!isMobileLayout() && event.target === workspace && event.propertyName === 'grid-template-columns') {
+    window.clearTimeout(layoutEventTimer);
+    announceLayoutChange();
+  }
+});
+sidebar.addEventListener('transitionend', (event) => {
+  if (isMobileLayout() && event.target === sidebar && event.propertyName === 'transform') {
+    window.clearTimeout(layoutEventTimer);
+    announceLayoutChange();
+  }
+});
+
+mobileMediaQuery.addEventListener('change', () => {
+  state.mobileSidebarOpen = false;
+  document.body.classList.remove('drawer-open');
+  drawerScrim.hidden = true;
+  sidebarContent.inert = isMobileLayout();
+  updateSidebarButtons();
+  announceLayoutChange();
 });
 
 // The menu controls the active content section and remains available to future modules.
@@ -177,6 +337,7 @@ function setActiveView(viewName, announce = true) {
   if (!view || !selectedItem) return;
 
   state.view = viewName;
+  if (viewName !== 'map') setMapMaximized(false);
   document.querySelectorAll('.content-view').forEach((section) => {
     section.hidden = section !== view;
   });
@@ -239,6 +400,21 @@ document.addEventListener('keydown', (event) => {
 
 // The map is the initial view on every page load.
 setActiveView(state.view);
+
+// Let the map use the full main panel, then restore the insights layout on demand.
+function setMapMaximized(maximized) {
+  state.mapMaximized = maximized;
+  document.body.classList.toggle('map-maximized', maximized);
+  if (mapExpandButton) {
+    mapExpandButton.setAttribute('aria-pressed', String(maximized));
+    const label = maximized ? 'Restore map size' : 'Maximize map';
+    mapExpandButton.setAttribute('aria-label', label);
+    mapExpandButton.title = label;
+    mapExpandButton.querySelector('span').textContent = maximized ? '▣' : '⛶';
+  }
+}
+
+mapExpandButton.addEventListener('click', () => setMapMaximized(!state.mapMaximized));
 
 // No hotspot dataset is connected yet; announce that the export control is a placeholder.
 document.querySelector('#download-csv').addEventListener('click', () => {

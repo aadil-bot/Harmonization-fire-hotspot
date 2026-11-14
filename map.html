@@ -42,6 +42,8 @@
 
     <div class="workspace">
       <aside class="sidebar" id="sidebar" aria-label="Map filters">
+        <div class="sidebar-resize-handle" id="sidebar-resize-handle" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize sidebar" aria-controls="sidebar" aria-valuemin="200" aria-valuemax="420" aria-valuenow="276"><span aria-hidden="true"></span></div>
+        <div class="sidebar-content" id="sidebar-content">
         <div class="sidebar-heading">
           <div><p class="eyebrow">MAP CONTROLS</p><h1>Filter activity</h1></div>
           <button id="drawer-close" class="icon-button drawer-close" type="button" aria-label="Close filters">×</button>
@@ -73,12 +75,13 @@
         </form>
 
         <div class="sidebar-foot"><span class="live-dot" aria-hidden="true"></span><span>NASA MODIS + VIIRS</span><span class="foot-separator">/</span><span>HARMONIZED</span></div>
+        </div>
       </aside>
 
       <main class="main-content">
         <section class="content-view map-view" id="view-map" aria-label="Map view">
         <section class="map-panel" aria-label="Fire hotspot map">
-          <div class="map-topline"><div><span class="live-dot" aria-hidden="true"></span><span id="map-region-label">DR CONGO</span></div><span class="map-layer-label">ACTIVE FIRE HOTSPOTS <span>·</span> MODIS + VIIRS</span></div>
+          <div class="map-topline"><div><span class="live-dot" aria-hidden="true"></span><span id="map-region-label">DR CONGO</span></div><div class="map-topline-actions"><span class="map-layer-label">ACTIVE FIRE HOTSPOTS <span>·</span> MODIS + VIIRS</span><button id="map-expand" class="map-expand-button" type="button" aria-label="Maximize map" aria-pressed="false" title="Maximize map"><span aria-hidden="true">⛶</span></button></div></div>
           <div id="map" role="region" aria-label="Map placeholder"><div class="map-placeholder"><span class="map-crosshair" aria-hidden="true">⌖</span><strong>Map goes here</strong><span>The interactive fire activity map will appear here.</span></div></div>
           <div class="map-legend" aria-label="Map legend"><span class="legend-title">DETECTION CONFIDENCE</span><span><i class="legend-dot low"></i>LOW</span><span><i class="legend-dot medium"></i>MEDIUM</span><span><i class="legend-dot high"></i>HIGH</span></div>
         </section>

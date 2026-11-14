@@ -74,8 +74,11 @@ select option { background: var(--surface); color: var(--text); }
 .role-group { margin-bottom: 20px; }
 .form-error { margin: -2px 0 14px; padding: 10px 12px; color: #ffd7c7; background: rgba(151, 48, 28, .2); border: 1px solid rgba(255, 116, 56, .55); border-radius: 4px; font-size: 11px; line-height: 1.5; }
 .form-error[hidden] { display: none; }
+.form-actions { display: grid; gap: 9px; }
 .submit-button { display: flex; align-items: center; justify-content: space-between; width: 100%; border: 1px solid var(--orange); border-radius: 4px; min-height: 48px; padding: 0 15px; color: #1c130e; background: linear-gradient(100deg, #ff8750, #ff6a32); font-size: 12px; font-weight: 700; cursor: pointer; transition: filter .18s ease, transform .18s ease; }
+.map-button { color: var(--orange-light); background: #171c19; }
 .submit-button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.map-button:hover { color: var(--text); background: #25201c; }
 .button-arrow { font-size: 19px; line-height: 1; }
 .secure-note { color: var(--subtle); text-align: center; font-size: 9px; margin: 13px 0 0; letter-spacing: .01em; }
 .secure-note span { color: var(--orange-light); margin-right: 5px; }

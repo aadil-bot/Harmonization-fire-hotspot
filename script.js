@@ -64,8 +64,8 @@ function clearError() {
   errorMessage.hidden = true;
 }
 
-form.addEventListener('submit', (event) => {
-  event.preventDefault();
+// Shared validated navigation for both primary actions.
+function goToApp(view) {
   clearError();
 
   const start = startInput.value;
@@ -78,25 +78,25 @@ form.addEventListener('submit', (event) => {
   for (const date of dates) {
     if (!date.value) {
       showError(`Please choose a ${date.label.toLowerCase()}.`, date.input);
-      return;
+      return false;
     }
     if (date.value < CONFIG.minDate || date.value > today) {
       showError(`${date.label} must be between November 1, 2000 and today.`, date.input);
-      return;
+      return false;
     }
   }
 
   if (start > end) {
     showError('Start date must be on or before the end date.', startInput);
-    return;
+    return false;
   }
   if (!CONFIG.regions.some((region) => region.value === regionSelect.value)) {
     showError('Please choose an available region.', regionSelect);
-    return;
+    return false;
   }
   if (!CONFIG.roles.some((role) => role.value === roleSelect.value)) {
     showError('Please choose a role.', roleSelect);
-    return;
+    return false;
   }
 
   const params = new URLSearchParams({
@@ -104,8 +104,16 @@ form.addEventListener('submit', (event) => {
     start,
     end,
     role: roleSelect.value,
+    view: view === 'calendar' ? 'calendar' : 'map',
   });
   window.location.href = `map.html?${params.toString()}`;
+  return true;
+}
+
+form.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const requestedView = event.submitter?.dataset.view || 'map';
+  goToApp(requestedView);
 });
 
 // Clear stale errors as soon as the user edits a field.
