@@ -706,6 +706,7 @@ if (window.L) {
 }
 
 window.addEventListener('filtersChanged', () => setActiveProvince(true));
+window.addEventListener('viewChanged', (event) => { if ((event.detail?.view || event.detail) === 'map') { requestAnimationFrame(() => { if (fireMap) fireMap.invalidateSize(); renderVisibleMap(); }); } });
 mapYear.addEventListener('input', () => loadYear(Number(mapYear.value)));
 setActiveProvince(true);
 loadYear(Number(mapYear.value));

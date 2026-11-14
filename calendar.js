@@ -44,16 +44,11 @@
   // Convert week totals to dated records for the existing monthly heatmap.
   if (typeof window.getFireData !== 'function') {
     window.getFireData = async function getFireData(region, start, end) {
-      const records = [];
-      (window.MOSAIC_CALENDAR_ROWS || []).forEach((row) => {
-        const year = row[0];
-        row.slice(1).forEach((value, index) => {
-          if (value == null) return;
-          const date = new Date(Date.UTC(year, 0, 1 + index * 7)).toISOString().slice(0, 10);
-          if (date >= start && date <= end) records.push({ date, count: value });
-        });
-      });
-      if (!records.length) throw new Error('Bundled Canadian activity calendar did not load');
+      const provinceMonths = window.MOSAIC_PROVINCE_MONTHS?.[region] || {};
+      const records = Object.entries(provinceMonths)
+        .filter(([month]) => month >= start.slice(0, 7) && month <= end.slice(0, 7))
+        .map(([month, count]) => ({ date: `${month}-01`, count }));
+      if (!Object.keys(provinceMonths).length) throw new Error(`No provincial calendar data found for ${region}`);
       return records;
     };
   }
@@ -244,9 +239,9 @@
     if (section.hidden) return;
     const thisRender = ++renderNumber;
     const { region, start, end } = latestFilters;
-    regionLabel.textContent = 'CANADA · ' + region.replaceAll('-', ' ').toUpperCase();
+    regionLabel.textContent = region.replaceAll('-', ' ').toUpperCase();
     status.hidden = false;
-    status.textContent = 'Loading Canada-wide harmonized weekly activity…';
+    status.textContent = `Loading ${region.replaceAll('-', ' ')} monthly fire activity…`;
     gridWrap.hidden = true;
     legend.hidden = true;
     hideTooltip();
