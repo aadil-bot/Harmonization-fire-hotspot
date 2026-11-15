@@ -7,15 +7,15 @@
   <meta name="description" content="MOSAIC — MODIS-VIIRS Observation Synthesis for Activity and Intensity Calendars. Explore harmonized satellite fire hotspot activity.">
   <title>MOSAIC — Fire activity map</title>
   <link rel="stylesheet" href="calendar.css">
-  <link rel="stylesheet" href="map.css?v=8">
+  <link rel="stylesheet" href="map.css?v=9">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
-  <link rel="stylesheet" href="insights.css?v=2">
+  <link rel="stylesheet" href="insights.css?v=3">
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous" defer></script>
   <script src="calendar-data.js?v=5" defer></script>
   <script src="data/canada/province_monthly.js?v=1" defer></script>
   <script src="data/calibration_factors.js?v=1" defer></script>
   <script src="data/map-years/2023.js?v=5" defer></script>
-  <script src="map.js?v=8" defer></script>
+  <script src="map.js?v=9" defer></script>
   <script src="calendar.js?v=6" defer></script>
   <script src="insights.js?v=5" defer></script>
 </head>
@@ -127,15 +127,16 @@
           </div>
         </section>
         <section class="content-view analysis-view" id="view-compare" aria-labelledby="compare-title" hidden>
-          <div class="analysis-heading"><p class="eyebrow">ACROSS REGIONS</p><h1 id="compare-title">Compare fire activity</h1><p>Choose two provinces or territories to compare monthly harmonized activity for the selected dates.</p></div>
+          <div class="analysis-heading"><p class="eyebrow">ACROSS REGIONS</p><h1 id="compare-title">Compare fire activity</h1><p>Compare the total monthly harmonized fire-cell activity for two provinces or territories over the date range selected in the sidebar.</p></div>
           <div class="compare-controls">
             <label>Region one<select id="compare-region-a"></select></label>
             <span aria-hidden="true">vs</span>
             <label>Region two<select id="compare-region-b"></select></label>
           </div>
           <div id="compare-summary" class="compare-summary" role="status" aria-live="polite"></div>
+          <div class="compare-legend" aria-label="Chart colors"><span><i class="compare-swatch compare-swatch-a" aria-hidden="true"></i><span id="compare-legend-a">Province one</span></span><span><i class="compare-swatch compare-swatch-b" aria-hidden="true"></i><span id="compare-legend-b">Province two</span></span></div>
           <div class="chart-wrap"><canvas id="compare-chart" aria-label="Monthly fire activity comparison chart"></canvas></div>
-          <p class="analysis-note">Values are harmonized fire-cell activity. MODIS observations before 2012 are calibrated to the VIIRS scale.</p>
+          <p class="analysis-note">Each pair of bars shows one calendar month: orange is province one and teal is province two. Bar height is the monthly total for the activity mode selected in the sidebar. Harmonized values calibrate MODIS observations before 2012 to the VIIRS scale.</p>
         </section>
         <section class="content-view analysis-view" id="view-live" aria-labelledby="live-title" hidden>
           <div class="analysis-heading"><p class="eyebrow">RECENT DETECTIONS · <span id="live-region-label">ALBERTA</span></p><h1 id="live-title">Hotspot activity feed</h1><p>Recent mapped fire cells for the selected province or territory, ordered by last observed activity.</p></div>
