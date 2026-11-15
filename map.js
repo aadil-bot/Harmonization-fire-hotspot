@@ -576,6 +576,24 @@ function pointInIndex(index, lon, lat) {
 
 function pointInProvince(lon, lat) { return pointInIndex(activeProvinceIndex, lon, lat); }
 
+// Use one Canada-wide projection for the canvas fallback so every province is
+// reachable even when Leaflet or its basemap tiles are unavailable.
+function fallbackProjection(width, height) {
+  const bounds = { minLon: -141.5, maxLon: -51.5, minLat: 41.5, maxLat: 83.5 };
+  const padding = 34;
+  const centerLat = (bounds.minLat + bounds.maxLat) / 2;
+  const xScaleFactor = Math.cos(centerLat * Math.PI / 180);
+  const projectX = (lon) => lon * xScaleFactor;
+  const xMin = projectX(bounds.minLon), xMax = projectX(bounds.maxLon);
+  const scale = Math.min((width - padding * 2) / Math.max(.01, xMax - xMin), (height - padding * 2) / Math.max(.01, bounds.maxLat - bounds.minLat));
+  const offsetX = (width - (xMax - xMin) * scale) / 2;
+  const offsetY = (height - (bounds.maxLat - bounds.minLat) * scale) / 2;
+  return {
+    project: (lon, lat) => [offsetX + (projectX(lon) - xMin) * scale, offsetY + (bounds.maxLat - lat) * scale],
+    unproject: (x, y) => [((x - offsetX) / scale + xMin) / xScaleFactor, bounds.maxLat - (y - offsetY) / scale],
+  };
+}
+
 async function selectProvinceAt(lat, lon) {
   document.querySelector('#map-search-status').textContent = 'Checking which province or territory contains that point…';
   const candidates = CONFIG.regions.filter((region) => {
@@ -685,23 +703,14 @@ function drawFallback(rows) {
   ctx.fillStyle = '#142019';
   ctx.fillRect(0, 0, box.width, box.height);
 
-  const bounds = activeProvinceIndex?.bounds || { minLon: -141.1, maxLon: -52.6, minLat: 41.7, maxLat: 82.6 };
-  const padding = 34;
-  const centerLat = (bounds.minLat + bounds.maxLat) / 2;
-  const xScaleFactor = Math.cos(centerLat * Math.PI / 180);
-  const projectX = (lon) => lon * xScaleFactor;
-  const xMin = projectX(bounds.minLon), xMax = projectX(bounds.maxLon);
-  const scale = Math.min((box.width - padding * 2) / Math.max(.01, xMax - xMin), (box.height - padding * 2) / Math.max(.01, bounds.maxLat - bounds.minLat));
-  const offsetX = (box.width - (xMax - xMin) * scale) / 2;
-  const offsetY = (box.height - (bounds.maxLat - bounds.minLat) * scale) / 2;
-  const project = ([lon, lat]) => [offsetX + (projectX(lon) - xMin) * scale, offsetY + (bounds.maxLat - lat) * scale];
+  const { project } = fallbackProjection(box.width, box.height);
 
   if (activeProvinceFeature) {
     ctx.beginPath();
     activeProvinceFeature.geometry.coordinates.forEach((polygon) => {
       polygon.forEach((ring) => {
         ring.forEach((point, index) => {
-          const [x, y] = project(point);
+          const [x, y] = project(point[0], point[1]);
           if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         });
         ctx.closePath();
@@ -715,7 +724,7 @@ function drawFallback(rows) {
   }
 
   rows.forEach((row) => {
-    const [x, y] = project([row.lon, row.lat]);
+    const [x, y] = project(row.lon, row.lat);
     const activity = mapActivityValue(row);
     const level = fireColour(activity);
     const radius = Math.min(5.2, 1.8 + Math.log1p(activity || 0) * .45);
@@ -820,7 +829,7 @@ function syncSliderFromDates() {
 }
 
 if (window.L) {
-  fireMap = L.map('fire-map', { preferCanvas: true }).setView([53.5, -113.5], 5);
+  fireMap = L.map('fire-map', { preferCanvas: true }).setView([62, -98], 3);
   mapRenderer = L.canvas({ padding: .5, tolerance: 10 });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap contributors' }).addTo(fireMap);
   fireBoundaryLayer = L.layerGroup().addTo(fireMap);
@@ -860,15 +869,27 @@ const mapSearchForm = document.querySelector('#map-search-form');
 const mapSearchInput = document.querySelector('#map-search');
 const mapSearchStatus = document.querySelector('#map-search-status');
 const placesList = document.querySelector('#canadian-places');
+if (!window.L) {
+  // The plain-canvas fallback shares the same hit-testing data as the map.
+  // Convert each click back to lon/lat, then select the province containing it.
+  document.querySelector('#fire-map').addEventListener('click', (event) => {
+    if (event.target.closest('button, input, form, a')) return;
+    const canvas = document.querySelector('#fire-map canvas');
+    if (!canvas) return;
+    const bounds = canvas.getBoundingClientRect();
+    const projection = fallbackProjection(bounds.width, bounds.height);
+    const [lon, lat] = projection.unproject(event.clientX - bounds.left, event.clientY - bounds.top);
+    selectProvinceAt(lat, lon);
+  });
+  mapSearchStatus.textContent = 'Click anywhere on the Canada view to select a province or territory.';
+}
 CANADIAN_PLACES.forEach(([name]) => { const option = document.createElement('option'); option.value = name; placesList.append(option); });
 CONFIG.regions.forEach((region) => { const option = document.createElement('option'); option.value = region.label; placesList.append(option); });
 
 document.querySelector('#map-reset').addEventListener('click', () => {
-  if (!fireMap) { mapSearchStatus.textContent = 'Map controls are unavailable because the interactive map library did not load.'; return; }
-  const boundary = fireBoundaryLayer?.getLayers()[0];
-  if (boundary) fireMap.fitBounds(boundary.getBounds(), { padding: [24, 24] });
-  else fireMap.setView([53.5, -113.5], 5);
-  mapSearchStatus.textContent = `Map reset to ${CONFIG.regions.find((region) => region.value === state.region)?.label || 'Canada'}.`;
+  if (!fireMap) { renderVisibleMap(); mapSearchStatus.textContent = 'Map reset to the full Canada view. Select a province by clicking it on the map.'; return; }
+  fireMap.fitBounds([[41.5, -141.5], [83.5, -51.5]], { padding: [24, 24] });
+  mapSearchStatus.textContent = 'Map reset to the full Canada view. Click a province or territory to select it.';
 });
 
 // Keep the location search tucked behind an icon until the user needs it.
@@ -925,7 +946,9 @@ mapSearchForm.addEventListener('submit', async (event) => {
 });
 
 window.addEventListener('filtersChanged', () => {
-  setActiveProvince(true);
+  // Preserve the Canada-wide view after province selection so distant
+  // provinces remain reachable. City searches can still zoom in.
+  setActiveProvince(Boolean(pendingMapPlace));
   syncSliderFromDates();
   const key = `${mapYearStart.value}:${mapYearEnd.value}:${harmonizationMode.value}`;
   if (key !== requestedYearRange) loadYearRange();
@@ -954,7 +977,7 @@ mapYearEnd.addEventListener('input', () => {
 });
 mapYearStart.addEventListener('change', updateDateRangeFromSlider);
 mapYearEnd.addEventListener('change', updateDateRangeFromSlider);
-setActiveProvince(true);
+setActiveProvince(false);
 syncSliderFromDates();
 loadYearRange();
 
