@@ -26,6 +26,9 @@
 .calendar-tooltip { position: absolute; z-index: 4; left: 0; top: 0; max-width: min(250px, calc(100% - 12px)); padding: 8px 10px; color: var(--text); background: #0d110f; border: 1px solid #59635b; border-radius: 4px; box-shadow: 0 6px 18px rgba(0, 0, 0, .38); font: 10px/1.5 var(--sans); pointer-events: none; }
 .calendar-cell:focus-visible { outline-offset:3px; }
 .calendar-drill[hidden], .calendar-week-list[hidden], .calendar-day-list[hidden], #calendar-back-month[hidden] { display:none; }
+.calendar-panel-entering { animation:calendar-panel-enter 200ms cubic-bezier(.2,.7,.2,1) both; }
+@keyframes calendar-panel-enter { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+@media (prefers-reduced-motion:reduce) { .calendar-panel-entering { animation:none; } }
 .calendar-drill { margin-top:14px; padding:18px; background:rgba(16,20,18,.48); border:1px solid #303833; border-radius:5px; }
 .calendar-drill-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; }
 .calendar-drill-heading .eyebrow { margin:0 0 5px; }

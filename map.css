@@ -53,6 +53,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .quick-hop-button span { color:var(--orange-light); font-size:15px; }
 .quick-hop-button:hover { background:#2a332d; border-color:var(--orange-light); }
 .content-view[hidden] { display: none !important; }
+.content-view.view-entering { animation: content-view-enter 220ms cubic-bezier(.2,.7,.2,1) both; }
+@keyframes content-view-enter { from { opacity:0; transform:translateY(9px); } to { opacity:1; transform:translateY(0); } }
 .map-view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .placeholder-view { flex: 1; min-height: 420px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: clamp(28px, 7vw, 90px); border: 1px solid #29312b; border-radius: 5px; background: radial-gradient(ellipse at 75% 25%, rgba(81, 49, 30, .12), transparent 43%), repeating-linear-gradient(0deg, transparent 0 47px, rgba(131, 150, 136, .025) 47px 48px), repeating-linear-gradient(90deg, transparent 0 47px, rgba(131, 150, 136, .025) 47px 48px), #151a17; }
 .placeholder-view .eyebrow { margin-bottom: 12px; }
@@ -178,6 +180,7 @@ body.map-maximized .map-panel { border-color: #48524b; }
   .insights-list li { font-size: 14px; }
   .main-footer { min-height: 35px; font-size: 6px; }
 }
+@media (prefers-reduced-motion:reduce) { .content-view.view-entering { animation:none; } }
 @media (max-width: 360px) {
   .topbar { padding: 0 9px; }
   .topbar-left, .topbar-actions { gap: 8px; }

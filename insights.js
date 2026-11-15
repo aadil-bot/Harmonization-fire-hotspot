@@ -164,30 +164,31 @@ const ROLE_CONTENT = {
     const fmt = (value) => Math.round(value).toLocaleString();
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const modeLabel = mode === 'modis' ? 'MODIS raw' : mode === 'viirs' ? 'VIIRS raw' : 'Harmonized';
+    const activityUnit = 'fire-cell-days (one active grid cell on one day)';
     const stat = (label, value, caption) => ({ label, value, caption });
     const defaultStats = [
-      stat('Selected-period activity', fmt(total), `${entries.length} archive years · ${modeLabel}`),
-      stat('Highest-activity month', monthNames[peakIndex] || '—', `${fmt(monthlyTotals[peakIndex] || 0)} activity units`),
+      stat('Selected-period activity', fmt(total), `${entries.length} archive years · ${modeLabel} · ${activityUnit}`),
+      stat('Highest-activity month', monthNames[peakIndex] || '—', `${fmt(monthlyTotals[peakIndex] || 0)} ${activityUnit}`),
       stat('Archive coverage', entries.length ? `${entries[0][0]}–${entries.at(-1)[0]}` : 'No records', 'Provincial data through 2025'),
     ];
     const byRole = {
       'emergency-response': [
-        stat('Latest archive year', peakYear ? fmt(peakYear[1]) : '—', peakYear ? `${peakYear[0]} · activity units` : 'No years in selected range'),
-        stat('Historical anomaly', anomaly === null ? '—' : `${anomaly >= 0 ? '+' : ''}${anomaly.toFixed(0)}%`, baseline === null ? 'Baseline unavailable' : `Versus previous ${previous.length} archive years`),
+        stat('Latest archive year', peakYear ? fmt(peakYear[1]) : '—', peakYear ? `${peakYear[0]} provincial total · ${activityUnit}` : 'No years in selected range'),
+        stat('Historical anomaly', anomaly === null ? '—' : `${anomaly >= 0 ? '+' : ''}${anomaly.toFixed(0)}%`, baseline === null ? 'Baseline unavailable' : `Percent difference from the previous ${previous.length} archive years`),
         stat('Forecast information', 'Historical only', 'No live weather or incident feed'),
       ],
       scientist: [
-        stat('Selected-period activity', fmt(total), `${entries.length} years · ${modeLabel}`),
+        stat('Selected-period activity', fmt(total), `${entries.length} years · ${modeLabel} · ${activityUnit}`),
         stat('Sensor calibration', mode === 'harmonized' ? 'Applied' : mode === 'modis' ? 'Off' : 'Not needed', mode === 'harmonized' ? 'Monthly MODIS factors; VIIRS unchanged' : 'MODIS calibration can be compared in harmonized mode'),
         stat('Data coverage', entries.length ? `${entries[0][0]}–${entries.at(-1)[0]}` : 'No records', 'Provincial monthly archive'),
       ],
       'land-manager': [
-        stat('Peak activity season', monthNames[peakIndex] || '—', `${fmt(monthlyTotals[peakIndex] || 0)} activity units`),
-        stat('Active months', monthlyTotals.filter((value) => value > 0).length.toString(), 'Across selected period'),
+        stat('Peak activity season', monthNames[peakIndex] || '—', `${fmt(monthlyTotals[peakIndex] || 0)} ${activityUnit}`),
+        stat('Active months', monthlyTotals.filter((value) => value > 0).length.toString(), 'Months with at least one fire-cell-day in the selected period'),
         stat('Recurring peak month', monthNames[peakIndex] || '—', 'Highest combined monthly activity'),
       ],
       firefighter: [
-        stat('Latest archive year', peakYear ? String(peakYear[0]) : '—', peakYear ? `${fmt(peakYear[1])} activity units` : 'No years in selected range'),
+        stat('Latest archive year', peakYear ? String(peakYear[0]) : '—', peakYear ? `${fmt(peakYear[1])} ${activityUnit}` : 'No years in selected range'),
         stat('Detection details', 'Map records', 'Coordinates and FRP where recorded'),
         stat('Confidence & conditions', 'Unavailable', 'Not included in the current archive'),
       ],

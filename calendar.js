@@ -160,12 +160,21 @@
 
   window.loadMosaicProvinceDaily = loadProvinceDaily;
 
+  function animateCalendarPanel(element) {
+    if (!element || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    element.classList.remove('calendar-panel-entering');
+    void element.offsetWidth;
+    element.classList.add('calendar-panel-entering');
+    element.addEventListener('animationend', () => element.classList.remove('calendar-panel-entering'), { once: true });
+  }
+
   function showYearOverview() {
     drillState = { level: 'year', year: null, month: null, weekIndex: null };
     currentMonthWeeks = [];
     drill.hidden = true;
     gridWrap.hidden = false;
     legend.hidden = false;
+    animateCalendarPanel(gridWrap);
     hideTooltip();
   }
 
@@ -175,6 +184,7 @@
     gridWrap.hidden = true;
     legend.hidden = true;
     drill.hidden = false;
+    animateCalendarPanel(drill);
     backToMonth.hidden = true;
     weekList.hidden = false;
     dayList.hidden = true;
@@ -238,6 +248,7 @@
     weekList.hidden = true;
     dayList.hidden = false;
     dayList.replaceChildren();
+    animateCalendarPanel(dayList);
     backToMonth.hidden = false;
     drillTitle.textContent = `${monthName(drillState.year, drillState.month)} · Week ${weekIndex + 1}`;
     drillSummary.textContent = `${week.start} to ${week.end} · ${week.total.toLocaleString(undefined, { maximumFractionDigits: 1 })} activity. Daily values use the sensor mode selected in the sidebar.`;
@@ -457,6 +468,7 @@
       drill.hidden = false;
       weekList.hidden = false;
       dayList.hidden = true;
+      animateCalendarPanel(drill);
       drillTitle.textContent = monthName(year, month);
       drillSummary.textContent = 'Loading daily activity for this province…';
       weekList.replaceChildren();

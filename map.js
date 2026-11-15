@@ -380,6 +380,7 @@ function setActiveView(viewName, announce = true) {
   const view = document.querySelector(`#view-${viewName}`);
   const selectedItem = menuItems.find((item) => item.dataset.view === viewName);
   if (!view || !selectedItem) return;
+  const isChangingView = document.querySelector('.content-view:not([hidden])') !== view;
 
   state.view = viewName;
   updateCalendarMapHop();
@@ -389,6 +390,12 @@ function setActiveView(viewName, announce = true) {
     section.hidden = !isActive;
     section.setAttribute('aria-hidden', String(!isActive));
   });
+  if (isChangingView && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    view.classList.remove('view-entering');
+    void view.offsetWidth;
+    view.classList.add('view-entering');
+    view.addEventListener('animationend', () => view.classList.remove('view-entering'), { once: true });
+  }
   menuItems.forEach((item) => {
     const isActive = item === selectedItem;
     item.classList.toggle('is-active', isActive);
@@ -1142,13 +1149,14 @@ function renderTrend() {
   ].map(([name, months]) => ({ name, total: months.reduce((sum, month) => sum + (selected?.months[month] || 0), 0) }));
   const peakSeason = seasons.reduce((peak, season) => season.total > peak.total ? season : peak, { name: '—', total: 0 });
 
+  const activityUnit = primaryIsRaw ? 'raw fire-cell-days' : 'harmonized fire-cell-days';
   const metrics = [
-    ['Selected year', selected ? trendNumber(selected.total) : '—', selected ? String(selected.year) : 'No years in range'],
-    ['Historical average', baseline.length ? trendNumber(average) : '—', baseline.length ? `${baseline.length} earlier years` : 'Baseline unavailable'],
-    ['Historical median', baseline.length ? trendNumber(historicalMedian) : '—', 'Earlier years only'],
-    ['Anomaly', anomaly === null ? '—' : `${anomaly >= 0 ? '+' : ''}${anomaly.toFixed(1)}σ`, 'Standard deviations from average'],
-    ['Difference from average', percentage === null ? '—' : `${percentage >= 0 ? '+' : ''}${percentage.toFixed(0)}%`, 'Selected year vs baseline'],
-    ['Peak season', peakSeason.name, `${trendNumber(peakSeason.total)} activity`],
+    ['Selected year', selected ? trendNumber(selected.total) : '—', selected ? `${selected.year} provincial total · ${activityUnit}` : 'No years in range'],
+    ['Historical average', baseline.length ? trendNumber(average) : '—', baseline.length ? `Mean per year · ${baseline.length} earlier years · ${activityUnit}` : 'Baseline unavailable'],
+    ['Historical median', baseline.length ? trendNumber(historicalMedian) : '—', `Middle value of earlier years · ${activityUnit}`],
+    ['Anomaly', anomaly === null ? '—' : `${anomaly >= 0 ? '+' : ''}${anomaly.toFixed(1)}σ`, 'Standard deviations from historical mean'],
+    ['Difference from average', percentage === null ? '—' : `${percentage >= 0 ? '+' : ''}${percentage.toFixed(0)}%`, 'Percent above or below the historical mean'],
+    ['Peak season', peakSeason.name, `${trendNumber(peakSeason.total)} ${activityUnit} in selected year`],
   ];
   trendMetrics.replaceChildren();
   metrics.forEach(([label, value, caption]) => {
