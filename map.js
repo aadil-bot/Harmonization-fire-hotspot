@@ -909,7 +909,8 @@ function syncSliderFromDates() {
 if (window.L) {
   fireMap = L.map('fire-map', { preferCanvas: true }).setView([62, -98], 3);
   mapRenderer = L.canvas({ padding: .5, tolerance: 10 });
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap contributors' }).addTo(fireMap);
+  // Keep the map self-contained: external OSM tiles are blocked in some
+  // environments and leave a gray screen behind the province and hotspots.
   fireBoundaryLayer = L.layerGroup().addTo(fireMap);
   fireLayer = L.layerGroup().addTo(fireMap);
   // Load only the selected province initially; other boundary files are lazy
@@ -1051,7 +1052,10 @@ mapYearEnd.addEventListener('input', () => {
 });
 mapYearStart.addEventListener('change', updateDateRangeFromSlider);
 mapYearEnd.addEventListener('change', updateDateRangeFromSlider);
-setActiveProvince(false);
+// Start focused on the selected province so its outline and activity are
+// immediately legible instead of appearing as a tiny shape in a Canada-wide
+// empty view.
+setActiveProvince(true);
 syncSliderFromDates();
 loadYearRange();
 
