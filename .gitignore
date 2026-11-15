@@ -1,0 +1,5 @@
+# Large data files kept local only (GitHub file size limits)
+data/HarmonizedTable.csv*
+data/viirs_Canada/viirs-snpp_2023_Canada.csv*
+data/viirs_Canada/viirs-snpp_2024_Canada.csv*
+data/viirs_Canada/viirs-snpp_2025_Canada.csv*
