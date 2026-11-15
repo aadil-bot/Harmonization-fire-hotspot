@@ -129,6 +129,9 @@
 .calendar-selection-banner { display:grid; gap:5px; margin:14px 0; padding:12px 14px; background:#202722; border-left:3px solid var(--orange-light); color:var(--muted); font-size:13px; line-height:1.5; }
 .calendar-selection-banner strong { color:var(--text); font:600 14px var(--display); text-transform:capitalize; }
 .calendar-legend { max-width: 280px; margin: 18px auto 0; }
+.calendar-data-note { margin:12px 0 0; padding:12px 14px; color:var(--muted); background:rgba(113,191,255,.07); border:1px solid rgba(113,191,255,.28); border-left:3px solid #71bfff; border-radius:4px; font-size:13px; line-height:1.55; }
+.calendar-data-note strong { display:block; margin-bottom:4px; color:#b9dfff; font:600 13px var(--display); }
+.calendar-data-note p { margin:0; }
 .legend-steps, .legend-captions, .legend-names { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
 .heat-swatch { height: 17px; display: grid; place-items: center; border: 1px solid rgba(18, 20, 18, .48); border-radius: 3px; color: #241b15; font: 500 8px var(--mono); }
 .heat-swatch.level-4 { color: #fff0de; }

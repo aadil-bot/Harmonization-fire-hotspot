@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101412">
   <meta name="description" content="MOSAIC — MODIS-VIIRS Observation Synthesis for Activity and Intensity Calendars. Explore harmonized satellite fire hotspot activity.">
   <title>MOSAIC — Fire activity map</title>
-  <link rel="stylesheet" href="calendar.css?v=7">
+  <link rel="stylesheet" href="calendar.css?v=8">
   <link rel="stylesheet" href="map.css?v=20">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
   <link rel="stylesheet" href="insights.css?v=6">
@@ -163,6 +163,10 @@
               <div class="legend-names"><span>Low</span><span>Moderate</span><span>Elevated</span><span>High</span></div>
             </div>
           </div>
+          <aside class="calendar-data-note" aria-label="2026 satellite data availability">
+            <strong>2026 satellite data availability</strong>
+            <p>2026 MODIS and VIIRS observations have not yet been shared with this site, so the historical calendar currently ends in 2025. To estimate activity for 2026 and beyond, use the Predictive Outlook below. It compares your selected future dates with historical activity for this province; it is a data-supported seasonal estimate, not a live observation or weather forecast.</p>
+          </aside>
           <section class="predictive-outlook" aria-labelledby="outlook-title">
             <div class="outlook-heading"><div><p class="eyebrow">SEASONAL PLANNING</p><h2 id="outlook-title">Predictive outlook</h2><p>Choose a future range of up to 90 days to estimate activity from matching historical periods in this province.</p></div><span class="outlook-badge">HISTORICAL BASELINE</span></div>
             <form id="outlook-form" class="outlook-controls">
