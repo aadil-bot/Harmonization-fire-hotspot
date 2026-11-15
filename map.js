@@ -65,6 +65,7 @@ const dateSummary = document.querySelector('#date-summary');
 const roleDescription = document.querySelector('#role-description');
 // Resolve this before the initial view switch, which may also reset map maximize.
 const mapExpandButton = document.querySelector('#map-expand');
+const mapPanel = document.querySelector('.map-panel');
 
 function localDateString(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -474,18 +475,40 @@ document.addEventListener('keydown', (event) => {
 // The map is the initial view on every page load.
 setActiveView(state.view);
 
-// Let the map use the full main panel, then restore the insights layout on demand.
-function setMapMaximized(maximized) {
+// Native fullscreen gives the map the entire display instead of only growing
+// inside the page. The fixed-position class is a fallback for older browsers.
+function syncMapMaximizedState(maximized) {
   state.mapMaximized = maximized;
   document.body.classList.toggle('map-maximized', maximized);
   if (mapExpandButton) {
     mapExpandButton.setAttribute('aria-pressed', String(maximized));
-    const label = maximized ? 'Restore map size' : 'Maximize map';
+    const label = maximized ? 'Exit full screen' : 'Full screen map';
     mapExpandButton.setAttribute('aria-label', label);
     mapExpandButton.title = label;
     mapExpandButton.querySelector('span').textContent = maximized ? '▣' : '⛶';
   }
 }
+
+async function setMapMaximized(maximized) {
+  if (maximized && mapPanel?.requestFullscreen) {
+    try {
+      await mapPanel.requestFullscreen({ navigationUI: 'hide' });
+      return;
+    } catch { /* Use the fixed-position fallback below. */ }
+  }
+  if (!maximized && document.fullscreenElement === mapPanel) {
+    try {
+      await document.exitFullscreen();
+      return;
+    } catch { /* Keep the button and fallback state in sync. */ }
+  }
+  syncMapMaximizedState(maximized);
+}
+
+document.addEventListener('fullscreenchange', () => {
+  syncMapMaximizedState(document.fullscreenElement === mapPanel);
+  requestAnimationFrame(() => fireMap?.invalidateSize());
+});
 
 mapExpandButton.addEventListener('click', () => setMapMaximized(!state.mapMaximized));
 

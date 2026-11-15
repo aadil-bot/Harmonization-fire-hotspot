@@ -106,7 +106,8 @@ select option { color: var(--text); background: var(--surface); }
 .map-expand-button:hover { background: #252d27; border-color: #59635b; }
 .map-expand-button:focus-visible { outline: 2px solid var(--orange-light); outline-offset: 3px; }
 body.map-maximized .insights-panel, body.map-maximized .main-footer { display: none; }
-body.map-maximized .map-panel { border-color: #48524b; }
+body.map-maximized .map-panel { position:fixed; z-index:1000; inset:0; width:100vw; height:100vh; height:100dvh; min-height:0; aspect-ratio:auto; border-color:#48524b; border-radius:0; }
+.map-panel:fullscreen { width:100vw; height:100vh; height:100dvh; min-height:0; aspect-ratio:auto; border-radius:0; }
 #map { min-height: 300px; flex: 1; display: grid; place-items: center; }
 .map-placeholder { display: flex; flex-direction: column; align-items: center; gap: 9px; color: var(--subtle); text-align: center; padding: 30px; }
 .map-crosshair { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid #48524b; border-radius: 50%; margin-bottom: 6px; color: var(--orange-light); font-size: 23px; }
@@ -181,6 +182,13 @@ body.map-maximized .map-panel { border-color: #48524b; }
   .main-footer { min-height: 35px; font-size: 6px; }
 }
 @media (prefers-reduced-motion:reduce) { .content-view.view-entering { animation:none; } }
+
+/* Give the map the first screen and place the role guidance below the full map. */
+.map-view { flex:0 0 auto; min-height:0; overflow:visible; }
+.map-view .map-panel { flex:0 0 auto; width:100%; height:auto; min-height:0; aspect-ratio:1 / 1; }
+.map-view #fire-map { min-height:0; }
+body.map-maximized .map-view .map-panel,
+.map-panel:fullscreen { width:100vw; height:100vh; height:100dvh; min-height:0; aspect-ratio:auto; }
 @media (max-width: 360px) {
   .topbar { padding: 0 9px; }
   .topbar-left, .topbar-actions { gap: 8px; }
