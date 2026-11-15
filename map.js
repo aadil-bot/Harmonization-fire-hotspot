@@ -49,6 +49,11 @@ const CANADIAN_PLACES = [
   ['Whitehorse', 60.7212, -135.0568, 'yukon'], ['Iqaluit', 63.7467, -68.517, 'nunavut'],
 ];
 
+// Keep navigation inside Canada's approximate geographic extent. The basemap
+// is intentionally vector-only so global tile requests and neighboring
+// countries do not add network or rendering work.
+const CANADA_MAP_BOUNDS = [[41.5, -141.5], [83.5, -51.5]];
+
 // This object is the live page state shared with map and calendar modules.
 const state = { region: 'alberta', start: '', end: '', role: 'general-view', view: 'map', mapMaximized: false, mobileSidebarOpen: false, sidebarWidth: null };
 window.MOSAIC_VIEW_CONTEXT = () => ({ ...state, mode: document.querySelector('#harmonization-mode')?.value || 'harmonized' });
@@ -907,9 +912,15 @@ function syncSliderFromDates() {
 }
 
 if (window.L) {
-  fireMap = L.map('fire-map', { preferCanvas: true }).setView([62, -98], 3);
+  fireMap = L.map('fire-map', {
+    preferCanvas: true,
+    maxBounds: CANADA_MAP_BOUNDS,
+    maxBoundsViscosity: 1,
+    minZoom: 2.5,
+    maxZoom: 12,
+    worldCopyJump: false,
+  }).setView([62, -98], 3);
   mapRenderer = L.canvas({ padding: .5, tolerance: 10 });
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap contributors' }).addTo(fireMap);
   fireBoundaryLayer = L.layerGroup().addTo(fireMap);
   fireLayer = L.layerGroup().addTo(fireMap);
   // Load only the selected province initially; other boundary files are lazy
@@ -962,7 +973,7 @@ CONFIG.regions.forEach((region) => { const option = document.createElement('opti
 
 document.querySelector('#map-reset').addEventListener('click', () => {
   if (!fireMap) { renderVisibleMap(); mapSearchStatus.textContent = 'Map reset to the full Canada view. Select a province by clicking it on the map.'; return; }
-  fireMap.fitBounds([[41.5, -141.5], [83.5, -51.5]], { padding: [24, 24] });
+  fireMap.fitBounds(CANADA_MAP_BOUNDS, { padding: [24, 24] });
   mapSearchStatus.textContent = 'Map reset to the full Canada view. Click a province or territory to select it.';
 });
 
