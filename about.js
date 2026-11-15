@@ -15,7 +15,7 @@
   }
 
   const svgNamespace = 'http://www.w3.org/2000/svg';
-  const width = 920, height = 420, left = 56, right = 22, top = 38, bottom = 62;
+  const width = 920, height = 420, left = 56, right = 152, top = 38, bottom = 62;
   const plotWidth = width - left - right, plotHeight = height - top - bottom, scaleMax = 8;
   const makeSvg = (tag, attributes = {}) => {
     const element = document.createElementNS(svgNamespace, tag);
@@ -59,6 +59,9 @@
   });
   // Draw the reference after the bars so it stays visible across the plot.
   svg.append(makeSvg('line', { x1: left, x2: width - right, y1: overallY, y2: overallY, class: 'overall-line' }));
+  const overallLabel = makeSvg('text', { x: width - right + 10, y: overallY + 4, 'text-anchor': 'start', class: 'overall-label' });
+  overallLabel.textContent = 'Overall ratio ≈ 2.78';
+  svg.append(overallLabel);
   chart.replaceChildren(svg);
 
   function showMonth(item) {

@@ -63,9 +63,6 @@
 .calibration-chart-heading strong { color:var(--text); font:600 17px var(--display); }
 .calibration-chart-heading span { color:var(--muted); font-size:12px; }
 .calibration-chart-heading .factor-scale-label { color:var(--subtle); font:9px var(--mono); letter-spacing:.1em; }
-.calibration-chart-meta { display:flex; align-items:center; flex-wrap:wrap; justify-content:flex-end; gap:12px; }
-.overall-ratio-badge { display:inline-flex; align-items:center; gap:7px; color:#b9dfff!important; font:11px var(--mono)!important; }
-.overall-ratio-badge i { display:inline-block; width:20px; border-top:2px dashed #71bfff; }
 .calibration-chart { margin-top:8px; }
 .calibration-chart svg { display:block; width:100%; height:auto; min-height:250px; overflow:visible; }
 .calibration-chart .grid-line { stroke:rgba(162,170,163,.16); stroke-width:1; }
@@ -75,6 +72,7 @@
 .calibration-chart .bar:hover,.calibration-chart .bar.is-selected { fill:#ff9b5f; stroke:#fff2e9; stroke-width:2; }
 .calibration-chart .bar:focus-visible { outline:none; stroke:#fff; stroke-width:3; }
 .calibration-chart .overall-line { stroke:#71bfff; stroke-width:1.5; stroke-dasharray:6 5; }
+.calibration-chart .overall-label { fill:#b9dfff; font:11px var(--mono); }
 .calibration-detail { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 14px; margin-top:8px; padding:12px 14px; background:#121815; border-left:3px solid #ff8750; }
 .calibration-detail strong { color:var(--orange-light); font:600 19px var(--display); }
 .calibration-detail span { color:var(--muted); font-size:13px; line-height:1.5; }

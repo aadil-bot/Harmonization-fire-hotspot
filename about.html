@@ -59,7 +59,7 @@
     <section class="about-section calibration-section" aria-labelledby="calibration-title">
       <div class="about-section-heading"><p class="eyebrow">03 · THE CALIBRATION DATA</p><h2 id="calibration-title">The adjustment changes with the season</h2><p>One fixed multiplier would miss the seasonal difference between what the sensors detect. Each bar below is the monthly <code>k_shrunk</code> factor used for MODIS observations before the VIIRS era.</p></div>
       <div class="calibration-panel">
-        <div class="calibration-chart-heading"><div><strong>Monthly MODIS → VIIRS factors</strong><span>Derived from the sensors’ 2012–2025 overlap</span></div><div class="calibration-chart-meta"><span class="overall-ratio-badge"><i aria-hidden="true"></i>Overall ratio ≈ 2.78</span><span class="factor-scale-label">MULTIPLIER · k_shrunk</span></div></div>
+        <div class="calibration-chart-heading"><div><strong>Monthly MODIS → VIIRS factors</strong><span>Derived from the sensors’ 2012–2025 overlap</span></div><span class="factor-scale-label">MULTIPLIER · k_shrunk</span></div>
         <div id="calibration-chart" class="calibration-chart" role="img" aria-label="Chart of monthly MODIS to VIIRS calibration factors"></div>
         <div class="calibration-detail" id="calibration-detail" aria-live="polite"><strong>Select a month</strong><span>The monthly factor shows how MODIS fire-cell activity is weighted onto the VIIRS comparison scale.</span></div>
         <p class="calibration-example"><b>Worked example:</b> the July factor is about 2.42. Ten MODIS fire-cell-days in July become about 24.2 VIIRS-scale activity units (10 × 2.42). This adjusts the total; it does not recreate small fires MODIS never detected.</p>
