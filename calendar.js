@@ -158,6 +158,8 @@
     return provinceDailyPromise;
   }
 
+  window.loadMosaicProvinceDaily = loadProvinceDaily;
+
   function showYearOverview() {
     drillState = { level: 'year', year: null, month: null, weekIndex: null };
     currentMonthWeeks = [];
