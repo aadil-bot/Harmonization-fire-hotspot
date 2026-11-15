@@ -62,6 +62,7 @@ const controls = {
 const errorBox = document.querySelector('#filter-error');
 const statusMessage = document.querySelector('#status-message');
 const dateSummary = document.querySelector('#date-summary');
+const roleDescription = document.querySelector('#role-description');
 // Resolve this before the initial view switch, which may also reset map maximize.
 const mapExpandButton = document.querySelector('#map-expand');
 
@@ -111,6 +112,11 @@ function renderRegion() {
   document.querySelector('#map-region-label').textContent = region.label.toUpperCase();
 }
 
+function renderRoleDescription() {
+  const role = CONFIG.roles.find((item) => item.value === state.role);
+  if (roleDescription) roleDescription.textContent = role?.description || 'Choose the viewpoint that best fits your work.';
+}
+
 function renderDateSummary() {
   dateSummary.textContent = `${formatDate(state.start)} — ${formatDate(state.end)}`;
 }
@@ -129,6 +135,7 @@ function applyControlChange(changedControl) {
   state.role = controls.role.value;
 
   if (changedControl === controls.region) renderRegion();
+  if (changedControl === controls.role) renderRoleDescription();
   renderDateSummary();
 
   const error = validateState();
@@ -166,6 +173,7 @@ function setupFromUrl() {
   controls.role.value = state.role;
 
   renderRegion();
+  renderRoleDescription();
   renderDateSummary();
 
   const error = validateState();

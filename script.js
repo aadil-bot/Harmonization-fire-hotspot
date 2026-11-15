@@ -34,6 +34,7 @@ const startInput = document.querySelector('#start');
 const endInput = document.querySelector('#end');
 const regionSelect = document.querySelector('#region');
 const roleSelect = document.querySelector('#role');
+const roleHint = document.querySelector('#role-hint');
 const errorMessage = document.querySelector('#form-error');
 
 // Use the visitor's local calendar date as the latest selectable date.
@@ -60,7 +61,13 @@ endInput.min = CONFIG.minDate;
 endInput.max = today;
 
 populateOptions(regionSelect, CONFIG.regions, (region) => region.label);
-populateOptions(roleSelect, CONFIG.roles, (role) => `${role.label} — ${role.description}`);
+populateOptions(roleSelect, CONFIG.roles, (role) => role.label);
+function updateRoleHint() {
+  const role = CONFIG.roles.find((item) => item.value === roleSelect.value);
+  roleHint.textContent = role?.description || 'Choose the perspective that best fits your work.';
+}
+roleSelect.addEventListener('change', updateRoleHint);
+updateRoleHint();
 
 // Begin with a lightweight recent period; visitors can expand it as needed.
 startInput.value = CONFIG.defaultStartDate;
