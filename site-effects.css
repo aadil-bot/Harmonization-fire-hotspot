@@ -1,4 +1,5 @@
 @view-transition { navigation: auto; }
+html { scroll-behavior:smooth; }
 ::view-transition-old(root) { animation: site-page-out 110ms ease both; }
 ::view-transition-new(root) { animation: site-page-in 190ms ease both; }
 @keyframes site-page-out { to { opacity: 0; } }
@@ -12,6 +13,7 @@ button:not(:disabled):hover,a:hover,[role="button"]:hover { transform:translateY
 button:not(:disabled):active,a:active,[role="button"]:active { transform:translateY(0); }
 
 @media (prefers-reduced-motion:reduce) {
+  html { scroll-behavior:auto; }
   ::view-transition-old(root),::view-transition-new(root) { animation-duration:1ms; }
   html.site-motion-ready .site-reveal { opacity:1;transform:none;transition:none; }
   button,a,[role="button"] { transition-duration:1ms!important; }

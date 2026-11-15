@@ -6,13 +6,14 @@
     '.about-main > section','.about-main > footer','.analysis-view','.insights-panel',
     '.outlook-section','.outlook-chart-panel','.trend-metric','.insight-stat',
     '.outlook-metric','.sensor-card','.limits-grid article','.calibration-panel',
-    '.about-source','.preview-window','.data-story',
+    '.about-source','.preview-window','.data-story','.method-steps li','.timeline-row',
+    '.calendar-card','.calendar-data-note','.predictive-outlook','.analysis-heading',
+    '.trend-controls','.compare-controls','.live-feed-card','.calendar-week-card',
+    '.calendar-day-card','.calendar-history-row',
   ].join(',');
   const observer = new IntersectionObserver((entries) => entries.forEach((entry) => {
-    if (!entry.isIntersecting) return;
-    entry.target.classList.add('is-revealed');
-    observer.unobserve(entry.target);
-  }), { threshold:.06, rootMargin:'0px 0px -28px 0px' });
+    entry.target.classList.toggle('is-revealed', entry.isIntersecting);
+  }), { threshold:.04, rootMargin:'0px 0px -24px 0px' });
 
   function observe(root) {
     if (root.matches?.(selector) && !root.classList.contains('site-reveal')) {
