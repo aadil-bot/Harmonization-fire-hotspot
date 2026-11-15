@@ -68,7 +68,7 @@
     svg.querySelectorAll('.bar').forEach((bar) => bar.classList.toggle('is-selected', Number(bar.dataset.month) === item.month));
     const amount = document.createElement('strong'); amount.textContent = `${item.name} · k = ${item.factor.toFixed(2)}`;
     const explanation = document.createElement('span');
-    explanation.textContent = `Example: 10 MODIS fire-cell-days in ${item.name} become about ${(10 * item.factor).toFixed(1)} VIIRS-scale activity units after weighting.`;
+    explanation.textContent = `Example: 10 MODIS fire-cell-days in ${item.name} become about ${(10 * item.factor).toFixed(1)} VIIRS-scale fire-cell-day equivalents after weighting.`;
     detail.replaceChildren(amount, explanation);
   }
   showMonth(values[6]);

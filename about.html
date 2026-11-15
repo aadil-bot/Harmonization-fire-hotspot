@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="about.css?v=5">
   <link rel="stylesheet" href="site-effects.css?v=1">
   <script src="data/calibration_factors.js?v=1" defer></script>
-  <script src="about.js?v=2" defer></script>
+  <script src="about.js?v=3" defer></script>
   <script src="site-effects.js?v=2" defer></script>
 </head>
 <body class="about-page">
@@ -26,9 +26,9 @@
       <h1 id="about-title">Two sensors.<br><span>One comparable record.</span></h1>
       <p class="about-lede">MOSAIC combines fire observations from MODIS and VIIRS to make long-term activity easier to compare. It corrects for a sensor change that can look like a sudden increase in fire even when the difference comes from how the satellites observe it.</p>
       <div class="about-stat-row" aria-label="Method summary">
-        <div><strong>0.1°</strong><span>shared daily grid</span></div>
-        <div><strong>12</strong><span>monthly calibration factors</span></div>
-        <div><strong>2002–2025</strong><span>Canadian archive coverage</span></div>
+        <div><strong>0.1°</strong><span>grid cell size · about 11 km north–south</span></div>
+        <div><strong>12</strong><span>monthly factors · one per calendar month</span></div>
+        <div><strong>2002–2025</strong><span>years covered by the Canadian archive</span></div>
       </div>
     </section>
 
@@ -64,7 +64,7 @@
         <div class="calibration-chart-heading"><div><strong>Monthly MODIS → VIIRS factors</strong><span>Derived from the sensors’ 2012–2025 overlap</span></div><span class="factor-scale-label">MULTIPLIER · k_shrunk</span></div>
         <div id="calibration-chart" class="calibration-chart" role="img" aria-label="Chart of monthly MODIS to VIIRS calibration factors"></div>
         <div class="calibration-detail" id="calibration-detail" aria-live="polite"><strong>Select a month</strong><span>The monthly factor shows how MODIS fire-cell activity is weighted onto the VIIRS comparison scale.</span></div>
-        <p class="calibration-example"><b>Worked example:</b> the July factor is about 2.42. Ten MODIS fire-cell-days in July become about 24.2 VIIRS-scale activity units (10 × 2.42). This adjusts the total; it does not recreate small fires MODIS never detected.</p>
+        <p class="calibration-example"><b>Worked example:</b> the July factor is about 2.42. Ten MODIS fire-cell-days in July become about 24.2 VIIRS-scale fire-cell-day equivalents (10 × 2.42). This adjusts the total; it does not recreate small fires MODIS never detected.</p>
       </div>
       <p class="calibration-validation"><b>How the method is checked:</b> the processing notebook also describes a hold-out check: fit factors on 2012–2018, apply them to MODIS in 2019 onward, then compare with VIIRS observations. The factor chart shows the calibration inputs, not a claim that every individual fire is detected by both sensors.</p>
       <p class="calibration-validation"><b>How the monthly factors are stabilized:</b> each month’s raw VIIRS-to-MODIS ratio is blended with the overall ratio. The monthly weight is <code>MODIS cell-days ÷ (MODIS cell-days + 200)</code>, so months with fewer observations are pulled more toward the overall factor. The notebook’s hold-out test reports annual percentage error and weekly correlation; the published factors alone do not include those validation scores.</p>

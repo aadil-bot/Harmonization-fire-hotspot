@@ -217,18 +217,18 @@
     currentMonthWeeks = [...weeks.values()];
     const total = currentMonthWeeks.reduce((sum, week) => sum + week.total, 0);
     const modeLabel = document.querySelector('#harmonization-mode')?.selectedOptions[0]?.textContent || 'Harmonized Activity';
-    drillSummary.textContent = `${latestFilters.region.replaceAll('-', ' ')} · ${firstAllowed} to ${lastAllowed} · ${modeLabel} · ${Math.round(total).toLocaleString()} total activity. Weeks run Monday–Sunday and are clipped to this month and your selected dates.`;
+    drillSummary.textContent = `${latestFilters.region.replaceAll('-', ' ')} · ${firstAllowed} to ${lastAllowed} · ${modeLabel} · ${Math.round(total).toLocaleString()} fire-cell-days (active grid cells counted once per day). Weeks run Monday–Sunday and are clipped to this month and your selected dates.`;
 
     const max = Math.max(1, ...currentMonthWeeks.map((week) => week.total));
     currentMonthWeeks.forEach((week, index) => {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'calendar-week-card';
-      button.setAttribute('aria-label', `Open week ${index + 1}, ${dateLabel(new Date(`${week.start}T00:00:00Z`))} to ${dateLabel(new Date(`${week.end}T00:00:00Z`))}, ${Math.round(week.total).toLocaleString()} activity`);
+      button.setAttribute('aria-label', `Open week ${index + 1}, ${dateLabel(new Date(`${week.start}T00:00:00Z`))} to ${dateLabel(new Date(`${week.end}T00:00:00Z`))}, ${Math.round(week.total).toLocaleString()} fire-cell-days`);
       const title = document.createElement('strong');
       title.textContent = `Week ${index + 1} · ${dateLabel(new Date(`${week.start}T00:00:00Z`))}–${dateLabel(new Date(`${week.end}T00:00:00Z`))}`;
       const amount = document.createElement('span');
-      amount.textContent = `${week.total.toLocaleString(undefined, { maximumFractionDigits: 1 })} activity`;
+      amount.textContent = `${week.total.toLocaleString(undefined, { maximumFractionDigits: 1 })} fire-cell-days`;
       const track = document.createElement('span');
       track.className = 'calendar-week-track';
       track.setAttribute('aria-hidden', 'true');
@@ -251,7 +251,7 @@
     animateCalendarPanel(dayList);
     backToMonth.hidden = false;
     drillTitle.textContent = `${monthName(drillState.year, drillState.month)} · Week ${weekIndex + 1}`;
-    drillSummary.textContent = `${week.start} to ${week.end} · ${week.total.toLocaleString(undefined, { maximumFractionDigits: 1 })} activity. Daily values use the sensor mode selected in the sidebar.`;
+    drillSummary.textContent = `${week.start} to ${week.end} · ${week.total.toLocaleString(undefined, { maximumFractionDigits: 1 })} fire-cell-days (one active grid cell counted per day). Daily values use the sensor mode selected in the sidebar.`;
     week.days.forEach(({ date, value }) => {
       const card = document.createElement('article');
       card.className = 'calendar-day-card';
@@ -261,7 +261,7 @@
       const amount = document.createElement('strong');
       amount.textContent = value.toLocaleString(undefined, { maximumFractionDigits: 1 });
       const unit = document.createElement('span');
-      unit.textContent = 'fire-cell activity';
+      unit.textContent = 'fire-cell-days';
       card.append(day, amount, unit);
       dayList.append(card);
     });
@@ -273,14 +273,14 @@
     const factors = window.MOSAIC_CALIBRATION_FACTORS || {};
     const archive = window.MOSAIC_PROVINCE_DAILY_META || { start: '2002-07-04', end: '2025-12-31' };
     const selectedMonth = String(monthIndex + 1).padStart(2, '0');
-    const startMonth = latestFilters.start.slice(0, 7);
-    const endMonth = latestFilters.end.slice(0, 7);
-    const firstYear = Math.max(Number(startMonth.slice(0, 4)), Number(archive.start.slice(0, 4)));
-    const lastYear = Math.min(year, Number(endMonth.slice(0, 4)), Number(archive.end.slice(0, 4)));
+    const archiveStartMonth = archive.start.slice(0, 7);
+    const archiveEndMonth = archive.end.slice(0, 7);
+    const firstYear = Number(archiveStartMonth.slice(0, 4));
+    const lastYear = Math.min(year, Number(archiveEndMonth.slice(0, 4)));
     const result = [];
     for (let currentYear = firstYear; currentYear <= lastYear; currentYear += 1) {
       const key = `${currentYear}-${selectedMonth}`;
-      if (key < startMonth || key > endMonth || key < archive.start.slice(0, 7) || key > archive.end.slice(0, 7)) continue;
+      if (key < archiveStartMonth || key > archiveEndMonth) continue;
       if (mode === 'modis' && currentYear > 2011) continue;
       if (mode === 'viirs' && currentYear < 2012) continue;
       const raw = Number(source[key]) || 0;
@@ -295,7 +295,7 @@
     const modeLabel = document.querySelector('#harmonization-mode')?.selectedOptions[0]?.textContent || 'Harmonized Activity';
     const previousYears = history.filter((entry) => entry.year < year);
     historyTitle.textContent = `${MONTHS[monthIndex].name} across available years`;
-    historySummary.textContent = `${latestFilters.region.replaceAll('-', ' ')} · ${modeLabel} · selected month: ${year} (${Math.round(count).toLocaleString()}) · comparison: the same calendar month in earlier years within your date range.`;
+    historySummary.textContent = `${latestFilters.region.replaceAll('-', ' ')} · ${modeLabel} · selected month: ${year} (${Math.round(count).toLocaleString()} fire-cell-days) · comparison: the same calendar month in all earlier available archive years, even when they fall outside the selected date range.`;
     historyBars.replaceChildren();
     const max = Math.max(1, ...history.map((entry) => entry.value));
     history.forEach((entry) => {
@@ -397,7 +397,7 @@
         button.dataset.year = String(year);
         button.dataset.count = String(count);
         button.dataset.level = String(level);
-        button.setAttribute('aria-label', `${monthName(year, monthIndex)}: ${count.toLocaleString()} activity, ${LEVELS[level - 1].label.toLowerCase()}. Activate to view weekly activity.`);
+        button.setAttribute('aria-label', `${monthName(year, monthIndex)}: ${count.toLocaleString()} fire-cell-days, ${LEVELS[level - 1].label.toLowerCase()}. Activate to view weekly activity.`);
         button.setAttribute('aria-describedby', 'calendar-tooltip');
         cell.append(button);
         row.append(cell);
@@ -430,7 +430,7 @@
     const year = Number(cell.dataset.year);
     const count = Number(cell.dataset.count);
     const level = Number(cell.dataset.level);
-    tooltip.textContent = `${monthName(year, monthIndex)} · ${count.toLocaleString()} activity · ${LEVELS[level - 1].label} · Click to view weeks`;
+    tooltip.textContent = `${monthName(year, monthIndex)} · ${count.toLocaleString()} fire-cell-days · ${LEVELS[level - 1].label} · Click to view weeks`;
     tooltip.hidden = false;
 
     const wrapRect = gridWrap.getBoundingClientRect();
@@ -525,10 +525,10 @@
     if (mode === 'viirs' && start < '2012-01-01') start = '2012-01-01';
     regionLabel.textContent = region.replaceAll('-', ' ').toUpperCase();
     if (description) description.textContent = mode === 'harmonized'
-      ? 'Harmonized monthly activity for this province or territory. Click a month block to open its weeks. MODIS values before 2012 are calibrated to the VIIRS scale.'
+      ? 'Monthly harmonized fire-cell-days for this province or territory. A fire-cell-day is one shared grid cell with at least one fire detection on one day. Click a month block to open its weeks. MODIS values before 2012 are calibrated to the VIIRS scale.'
       : mode === 'modis'
-        ? 'MODIS-only monthly activity before 2012, shown on its uncalibrated sensor scale. Click a month block to open its weeks.'
-        : 'VIIRS-only monthly activity from 2012 onward. Click a month block to open its weeks.';
+        ? 'Monthly MODIS fire-cell-days before 2012, shown on its uncalibrated sensor scale. Each active grid cell is counted once per day. Click a month block to open its weeks.'
+        : 'Monthly VIIRS fire-cell-days from 2012 onward. Each active grid cell is counted once per day. Click a month block to open its weeks.';
     status.hidden = false;
     status.textContent = `Loading ${region.replaceAll('-', ' ')} ${mode === 'harmonized' ? 'harmonized' : mode.toUpperCase()} calendar…`;    gridWrap.hidden = true;
     legend.hidden = true;

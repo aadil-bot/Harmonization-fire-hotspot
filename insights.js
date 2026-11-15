@@ -86,9 +86,10 @@ const ROLE_CONTENT = {
     const activity = Number(selection.activity) || 0;
     const difference = average > 0 ? ((activity - average) / average) * 100 : null;
     const region = String(selection.region || 'selected region').replaceAll('-', ' ');
+    const activityUnit = 'fire-cell-days (one active grid cell on one day)';
     const comparison = average === null
-      ? `No earlier same-month values are available in the selected range. The calendar shows ${Math.round(activity).toLocaleString()} activity units for ${selection.monthName} ${selection.year}.`
-      : `${Math.round(activity).toLocaleString()} activity units in ${region} during ${selection.monthName} ${selection.year}; earlier same-month average is ${Math.round(average).toLocaleString()} across ${prior.length} ${prior.length === 1 ? 'year' : 'years'} (${difference >= 0 ? '+' : ''}${difference.toFixed(0)}%). Values use ${selection.mode}.`;
+      ? `No earlier same-month values are available in the selected range. The calendar shows ${Math.round(activity).toLocaleString()} ${activityUnit} for ${selection.monthName} ${selection.year}.`
+      : `${Math.round(activity).toLocaleString()} ${activityUnit} in ${region} during ${selection.monthName} ${selection.year}; earlier same-month average is ${Math.round(average).toLocaleString()} across ${prior.length} ${prior.length === 1 ? 'year' : 'years'} (${difference >= 0 ? '+' : ''}${difference.toFixed(0)}%). Values use ${selection.mode}.`;
 
     const actionTemplates = {
       'general-view': [
@@ -120,9 +121,9 @@ const ROLE_CONTENT = {
     return {
       average,
       stats: [
-        { label: `${selection.monthName} ${selection.year} activity`, value: Math.round(activity).toLocaleString(), caption: `${region} · ${selection.mode}` },
-        { label: 'Earlier same-month average', value: average === null ? '—' : Math.round(average).toLocaleString(), caption: average === null ? 'No earlier records in range' : `${prior.length} earlier ${prior.length === 1 ? 'year' : 'years'}` },
-        { label: 'Compared with earlier average', value: difference === null ? '—' : `${difference >= 0 ? '+' : ''}${difference.toFixed(0)}%`, caption: difference === null ? 'Baseline unavailable' : 'Historical comparison, not a forecast' },
+        { label: `${selection.monthName} ${selection.year} activity`, value: Math.round(activity).toLocaleString(), caption: `${region} · ${selection.mode} · ${activityUnit}` },
+        { label: 'Earlier same-month average', value: average === null ? '—' : Math.round(average).toLocaleString(), caption: average === null ? 'No earlier records in range' : `Mean of ${prior.length} earlier ${prior.length === 1 ? 'year' : 'years'} · ${activityUnit}` },
+        { label: 'Compared with earlier average', value: difference === null ? '—' : `${difference >= 0 ? '+' : ''}${difference.toFixed(0)}%`, caption: difference === null ? 'Baseline unavailable' : 'Fire-cell-day percent difference from the same-month historical mean' },
       ],
       summary: `${({ 'general-view': 'Explore the selected period.', 'emergency-response': 'Preparedness context:', scientist: 'Research context:', 'land-manager': 'Seasonal planning context:', firefighter: 'Operational context:' })[selectedRole] || 'Selected viewpoint:'} ${comparison}`,
       actions: actionTemplates[selectedRole] || actionTemplates['general-view'],
@@ -174,7 +175,7 @@ const ROLE_CONTENT = {
     const byRole = {
       'emergency-response': [
         stat('Latest archive year', peakYear ? fmt(peakYear[1]) : '—', peakYear ? `${peakYear[0]} provincial total · ${activityUnit}` : 'No years in selected range'),
-        stat('Historical anomaly', anomaly === null ? '—' : `${anomaly >= 0 ? '+' : ''}${anomaly.toFixed(0)}%`, baseline === null ? 'Baseline unavailable' : `Percent difference from the previous ${previous.length} archive years`),
+        stat('Historical anomaly', anomaly === null ? '—' : `${anomaly >= 0 ? '+' : ''}${anomaly.toFixed(0)}%`, baseline === null ? 'Baseline unavailable' : `Latest archive-year fire-cell-days versus the previous ${previous.length}-year mean`),
         stat('Forecast information', 'Historical only', 'No live weather or incident feed'),
       ],
       scientist: [
