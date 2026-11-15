@@ -351,7 +351,9 @@ function setActiveView(viewName, announce = true) {
   state.view = viewName;
   if (viewName !== 'map') setMapMaximized(false);
   document.querySelectorAll('.content-view').forEach((section) => {
-    section.hidden = section !== view;
+    const isActive = section === view;
+    section.hidden = !isActive;
+    section.setAttribute('aria-hidden', String(!isActive));
   });
   menuItems.forEach((item) => {
     const isActive = item === selectedItem;
@@ -363,6 +365,10 @@ function setActiveView(viewName, announce = true) {
   if (announce) {
     window.dispatchEvent(new CustomEvent('viewChanged', { detail: { view: viewName } }));
   }
+
+  // Repaint size-dependent content only after the selected section is visible.
+  if (viewName === 'compare') requestAnimationFrame(() => renderComparison());
+  if (viewName === 'live') requestAnimationFrame(() => loadLiveYear());
 }
 
 function openMenu() {
@@ -818,7 +824,6 @@ compareRegionA.addEventListener('change',renderComparison);compareRegionB.addEve
 window.addEventListener('resize',renderComparison);
 window.addEventListener('filtersChanged',()=>{if(state.view==='compare')renderComparison();if(state.view==='live')loadLiveYear();});
 harmonizationMode.addEventListener('change',()=>{if(state.view==='compare')renderComparison();if(state.view==='live')renderLiveFeed();});
-window.addEventListener('viewChanged',(event)=>{const view=event.detail?.view||event.detail;if(view==='compare')requestAnimationFrame(renderComparison);if(view==='live')loadLiveYear();});
 function csvValue(value) {
   const text = String(value ?? '');
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;

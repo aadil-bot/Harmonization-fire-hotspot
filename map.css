@@ -206,7 +206,7 @@ body.map-maximized .map-panel { border-color: #48524b; }
 }
 
 
-.analysis-view { width:100%; min-height:0; flex:1 1 auto; padding:24px; overflow:auto; background:linear-gradient(145deg,rgba(29,35,31,.97),rgba(22,27,24,.98)); border:1px solid #343d37; border-radius:6px; }
+.analysis-view { display:flex; flex-direction:column; width:100%; min-height:0; flex:1 1 auto; padding:24px; overflow:auto; background:linear-gradient(145deg,rgba(29,35,31,.97),rgba(22,27,24,.98)); border:1px solid #343d37; border-radius:6px; }
 .analysis-heading { margin-bottom:20px; }
 .analysis-heading h1 { margin:0 0 8px; color:var(--text); font:600 clamp(22px,3vw,30px)/1.2 var(--display); letter-spacing:-.035em; }
 .analysis-heading > p:last-child,.analysis-note { color:var(--muted); font-size:12px; line-height:1.6; }
