@@ -121,6 +121,16 @@
 .outlook-history-bar,.outlook-month-bar { position:absolute; bottom:0; width:min(20px,65%); min-height:2px; background:var(--outlook-accent); border-radius:3px 3px 0 0; }
 .outlook-month-range { position:absolute; z-index:0; width:17px; background:color-mix(in srgb,var(--outlook-accent) 40%,transparent); border:1px solid var(--outlook-accent); border-radius:3px; }
 .outlook-month-bar { z-index:1; width:11px; opacity:.9; }
+.outlook-month-chart { display:grid; align-content:start; gap:13px; min-height:0; overflow:visible; padding:12px 2px 4px; border:0; }
+.outlook-range-row,.outlook-range-axis { display:grid; grid-template-columns:minmax(105px,.24fr) minmax(150px,1fr) minmax(155px,.34fr); align-items:center; gap:13px; }
+.outlook-range-label { color:var(--text); font-size:12px; font-weight:600; }
+.outlook-range-track { position:relative; display:block; height:13px; background:linear-gradient(to right,transparent calc(25% - .5px),rgba(255,255,255,.16) calc(25% - .5px),rgba(255,255,255,.16) calc(25% + .5px),transparent calc(25% + .5px),transparent calc(50% - .5px),rgba(255,255,255,.16) calc(50% - .5px),rgba(255,255,255,.16) calc(50% + .5px),transparent calc(50% + .5px),transparent calc(75% - .5px),rgba(255,255,255,.16) calc(75% - .5px),rgba(255,255,255,.16) calc(75% + .5px),transparent calc(75% + .5px)); background-color:#252d27; border-radius:8px; }
+.outlook-range-band { position:absolute; top:2px; height:9px; min-width:3px; background:color-mix(in srgb,var(--outlook-accent) 47%,transparent); border:1px solid var(--outlook-accent); border-radius:7px; }
+.outlook-range-mean { position:absolute; top:-4px; width:4px; height:21px; background:var(--outlook-accent); border:1px solid #fff6e9; border-radius:2px; transform:translateX(-50%); box-shadow:0 0 0 2px rgba(0,0,0,.3); }
+.outlook-range-values { color:var(--muted); font:11px/1.35 var(--mono); white-space:nowrap; }
+.outlook-month-chart-note { margin:10px 0 0!important; padding:9px 10px; color:#d4ddd5!important; background:rgba(255,255,255,.035); border-left:2px solid var(--outlook-accent,#ff8750); font-size:12px!important; line-height:1.55!important; }
+.outlook-range-axis { margin-top:-7px; }
+.outlook-range-ticks { display:flex; justify-content:space-between; color:var(--subtle); font:9px var(--mono); }
 .outlook-horizon { margin-top:10px!important; padding:9px 10px; color:#e1d4ae!important; background:rgba(205,166,85,.08); border-left:2px solid #d7a653; }
 #outlook-results[data-role="scientist"] .outlook-color-key span { background:#71bfff; }
 #outlook-results[data-role="land-manager"] .outlook-color-key span { background:#77d3a8; }
@@ -166,6 +176,10 @@
   .outlook-metrics { grid-template-columns:1fr; }
   .outlook-detail-grid { grid-template-columns:1fr; }
   .outlook-chart-grid { grid-template-columns:1fr; }
+  .outlook-range-row { grid-template-columns:minmax(82px,.3fr) minmax(115px,1fr); gap:7px; }
+  .outlook-range-values { grid-column:2; margin-top:-8px; }
+  .outlook-range-axis { grid-template-columns:minmax(82px,.3fr) minmax(115px,1fr); gap:7px; }
+  .outlook-range-axis > span:last-child { display:none; }
 }
 
 .calendar-grid tr.sensor-start-row td { height: 2px; padding: 0; border: 0; border-top: 2px solid #55aaff; text-align: right; line-height: 0; }

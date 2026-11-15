@@ -15,6 +15,7 @@
   const workedExample = document.querySelector('#outlook-example');
   const historyChart = document.querySelector('#outlook-history-chart');
   const monthChart = document.querySelector('#outlook-month-chart');
+  const monthChartNote = document.querySelector('#outlook-month-chart-note');
   const horizonNote = document.querySelector('#outlook-horizon');
   const roleStyles = {
     'general-view': { accent: '#ff8750', focus: 'expected', label: 'General View' },
@@ -217,22 +218,36 @@
 
   function drawMonthChart(result) {
     monthChart.replaceChildren();
-    const maximum = Math.max(1, ...result.monthly.map((item) => item.high));
-    monthChart.setAttribute('aria-label', `Expected monthly activity and middle 50 percent historical range for ${result.regionLabel}, ${formatDate(result.start)} to ${formatDate(result.end)}.`);
+    const maximum = Math.max(1, ...result.monthly.flatMap((item) => [item.high, item.mean]));
+    monthChart.setAttribute('aria-label', `Historical averages and middle-half ranges for the selected future dates in ${result.regionLabel}, compared with the same calendar dates in earlier years.`);
+    const explanations = [];
     result.monthly.forEach((month) => {
-      const column = document.createElement('div'); column.className = 'outlook-month-column';
-      const amount = document.createElement('span'); amount.className = 'outlook-chart-value'; amount.textContent = formatNumber(month.mean);
-      const track = document.createElement('span'); track.className = 'outlook-month-track';
-      const range = document.createElement('span'); range.className = 'outlook-month-range';
-      range.style.bottom = `${Math.max(0, month.low / maximum * 100)}%`;
-      range.style.height = `${Math.max(2, (month.high - month.low) / maximum * 100)}%`;
-      const bar = document.createElement('span'); bar.className = 'outlook-month-bar';
-      bar.style.height = `${Math.max(2, month.mean / maximum * 100)}%`;
-      track.append(range, bar);
-      const label = document.createElement('span'); label.className = 'outlook-chart-label'; label.textContent = month.label;
-      column.title = `${month.label}: mean ${formatNumber(month.mean)}, median ${formatNumber(month.median)}, middle 50% ${formatNumber(month.low)} to ${formatNumber(month.high)} activity units`;
-      column.append(amount, track, label); monthChart.append(column);
+      const row = document.createElement('div'); row.className = 'outlook-range-row';
+      const label = document.createElement('span'); label.className = 'outlook-range-label'; label.textContent = month.label;
+      const track = document.createElement('span'); track.className = 'outlook-range-track';
+      const band = document.createElement('span'); band.className = 'outlook-range-band';
+      band.style.left = `${Math.max(0, month.low / maximum * 100)}%`;
+      band.style.width = `${Math.max(1, (month.high - month.low) / maximum * 100)}%`;
+      const mean = document.createElement('span'); mean.className = 'outlook-range-mean';
+      mean.style.left = `${Math.min(100, Math.max(0, month.mean / maximum * 100))}%`;
+      track.append(band, mean);
+      const values = document.createElement('span'); values.className = 'outlook-range-values';
+      values.textContent = `Average ${formatNumber(month.mean)} | middle half ${formatNumber(month.low)}-${formatNumber(month.high)}`;
+      row.title = `${month.label}: mean ${formatNumber(month.mean)}, median ${formatNumber(month.median)}, middle 50% ${formatNumber(month.low)} to ${formatNumber(month.high)} activity units`;
+      row.append(label, track, values); monthChart.append(row);
+      if (month.mean > month.high) explanations.push(`${month.label}: the average (${formatNumber(month.mean)}) is above the middle-half band (${formatNumber(month.low)}-${formatNumber(month.high)}). A few busier past periods are pulling the average up; the median is ${formatNumber(month.median)}.`);
+      else if (month.mean < month.low) explanations.push(`${month.label}: the average (${formatNumber(month.mean)}) is below the middle-half band (${formatNumber(month.low)}-${formatNumber(month.high)}). A few quieter past periods are pulling the average down; the median is ${formatNumber(month.median)}.`);
+      else explanations.push(`${month.label}: the average (${formatNumber(month.mean)}) falls within the middle-half band (${formatNumber(month.low)}-${formatNumber(month.high)}), so it is close to the range seen in many past matching periods.`);
     });
+    monthChartNote.textContent = explanations.join(' ');
+    const axis = document.createElement('div'); axis.className = 'outlook-range-axis';
+    axis.append(document.createElement('span'));
+    const ticks = document.createElement('span'); ticks.className = 'outlook-range-ticks';
+    [0, .25, .5, .75, 1].forEach((ratio) => {
+      const tick = document.createElement('span'); tick.textContent = formatNumber(maximum * ratio); ticks.append(tick);
+    });
+    axis.append(ticks, document.createElement('span'));
+    monthChart.append(axis);
   }
 
   function viewpointInterpretation(key, role, result) {

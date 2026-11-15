@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101412">
   <meta name="description" content="MOSAIC — MODIS-VIIRS Observation Synthesis for Activity and Intensity Calendars. Explore harmonized satellite fire hotspot activity.">
   <title>MOSAIC — Fire activity map</title>
-  <link rel="stylesheet" href="calendar.css?v=8">
+  <link rel="stylesheet" href="calendar.css?v=10">
   <link rel="stylesheet" href="map.css?v=20">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
   <link rel="stylesheet" href="insights.css?v=6">
@@ -16,7 +16,7 @@
   <script src="data/calibration_factors.js?v=1" defer></script>
   <script src="map.js?v=18" defer></script>
   <script src="calendar.js?v=9" defer></script>
-  <script src="outlook.js?v=4" defer></script>
+  <script src="outlook.js?v=6" defer></script>
   <script src="insights.js?v=9" defer></script>
 </head>
 <body>
@@ -183,7 +183,7 @@
               <p class="outlook-color-key"><span aria-hidden="true"></span> Colored outline marks the statistic most relevant to your selected viewpoint. The value and calculation stay the same across roles.</p>
               <div class="outlook-chart-grid">
                 <section class="outlook-chart-panel"><h3>Matched historical periods</h3><p>Each bar is the activity recorded in one earlier period with the same month and day range.</p><div id="outlook-history-chart" class="outlook-history-chart" role="img"></div></section>
-                <section class="outlook-chart-panel"><h3>Expected activity by month</h3><p>Bars show the historical mean; the line shows the middle 50% range across matched years.</p><div id="outlook-month-chart" class="outlook-month-chart" role="img"></div></section>
+                <section class="outlook-chart-panel"><h3>Historical pattern for these future dates</h3><p>We compare the selected dates with those same dates in earlier years. The orange marker is the average; the shaded band is the middle half of past totals. A few unusually active years can pull the average outside that band.</p><div id="outlook-month-chart" class="outlook-month-chart" role="img"></div><p id="outlook-month-chart-note" class="outlook-month-chart-note"></p></section>
               </div>
               <div class="outlook-detail-grid"><section><h3>Monthly historical summary</h3><p id="outlook-month-explanation" class="outlook-month-explanation"></p><div id="outlook-months" class="outlook-months"></div></section><section><h3 id="outlook-guidance-title">Viewpoint interpretation</h3><p id="outlook-guidance"></p><h4 class="outlook-example-title">Worked example from these results</h4><p id="outlook-example" class="outlook-example"></p><p id="outlook-horizon" class="outlook-horizon"></p></section></div>
             </div>
