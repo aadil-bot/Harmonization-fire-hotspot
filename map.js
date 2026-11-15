@@ -558,6 +558,7 @@ function setActiveProvince(shouldZoom = true) {
       if (shouldZoom) fireMap.fitBounds(boundary.getBounds(), { padding: [24, 24] });
     }
     renderVisibleMap();
+    if(state.view==='live') renderLiveFeed();
   }).catch(() => {
     if (state.region === region.value) mapDataStatus.textContent = `Boundary data for ${region.label} could not be loaded.`;
   });
@@ -733,6 +734,91 @@ mapYear.addEventListener('input', () => loadYear(Number(mapYear.value)));
 setActiveProvince(true);
 loadYear(Number(mapYear.value));
 
+const compareRegionA = document.querySelector('#compare-region-a');
+const compareRegionB = document.querySelector('#compare-region-b');
+const compareCanvas = document.querySelector('#compare-chart');
+const compareSummary = document.querySelector('#compare-summary');
+const liveFeed = document.querySelector('#live-feed');
+const liveStatus = document.querySelector('#live-status');
+let liveRows = [];
+let liveYearRequested = null;
+
+function fillRegionSelect(select, selectedValue) {
+  CONFIG.regions.forEach((region) => {
+    const option = document.createElement('option'); option.value = region.value; option.textContent = region.label; select.append(option);
+  });
+  select.value = selectedValue;
+}
+fillRegionSelect(compareRegionA, state.region);
+fillRegionSelect(compareRegionB, CONFIG.regions.find((region) => region.value !== state.region)?.value || CONFIG.regions[1].value);
+
+function monthlySeries(regionValue) {
+  const source = window.MOSAIC_PROVINCE_MONTHS?.[regionValue] || {};
+  const mode = harmonizationMode.value;
+  const factors = window.MOSAIC_CALIBRATION_FACTORS || {};
+  const start = state.start.slice(0, 7), end = state.end.slice(0, 7);
+  const values = Array(12).fill(0);
+  Object.entries(source).forEach(([month, harmonizedValue]) => {
+    const year = Number(month.slice(0, 4)); const monthIndex = Number(month.slice(5, 7)) - 1;
+    if (month < start || month > end) return;
+    if (mode === 'modis' && year > 2011) return;
+    if (mode === 'viirs' && year < 2012) return;
+    const value = mode === 'modis' ? harmonizedValue / Number(factors[String(monthIndex + 1)]) : harmonizedValue;
+    values[monthIndex] += value;
+  });
+  return values;
+}
+
+function renderComparison() {
+  if (!compareCanvas || !compareRegionA.value || !compareRegionB.value) return;
+  const a = monthlySeries(compareRegionA.value), b = monthlySeries(compareRegionB.value);
+  const names = [CONFIG.regions.find((r) => r.value === compareRegionA.value).label, CONFIG.regions.find((r) => r.value === compareRegionB.value).label];
+  const totals = [a.reduce((x, y) => x + y, 0), b.reduce((x, y) => x + y, 0)];
+  compareSummary.textContent = `${names[0]}: ${Math.round(totals[0]).toLocaleString()} · ${names[1]}: ${Math.round(totals[1]).toLocaleString()} harmonized fire-cell activity`;
+  const box = compareCanvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  compareCanvas.width = Math.max(1, box.width * dpr); compareCanvas.height = Math.max(1, box.height * dpr);
+  const ctx = compareCanvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, box.width, box.height);
+  const pad = { left: 42, right: 14, top: 20, bottom: 34 }, chartW = box.width-pad.left-pad.right, chartH=box.height-pad.top-pad.bottom;
+  const max = Math.max(1, ...a, ...b); ctx.font='10px sans-serif'; ctx.fillStyle='#9da89f'; ctx.strokeStyle='#3a443d';
+  for(let i=0;i<=4;i++){const y=pad.top+chartH*i/4;ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(box.width-pad.right,y);ctx.stroke();ctx.fillText(Math.round(max*(1-i/4)).toLocaleString(),2,y+3);}
+  const labels=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const groupW=chartW/12, barW=Math.min(12,groupW*.3);
+  for(let i=0;i<12;i++){const x=pad.left+i*groupW+groupW/2;const h1=a[i]/max*chartH,h2=b[i]/max*chartH;ctx.fillStyle='#ff7438';ctx.fillRect(x-barW-1,pad.top+chartH-h1,barW,h1);ctx.fillStyle='#73cfc3';ctx.fillRect(x+1,pad.top+chartH-h2,barW,h2);ctx.fillStyle='#aeb8af';ctx.textAlign='center';ctx.fillText(labels[i],x,box.height-10);}ctx.textAlign='left';
+}
+
+function renderLiveFeed() {
+  if (!liveFeed || !liveStatus) return;
+  const region = CONFIG.regions.find((item) => item.value === state.region);
+  document.querySelector('#live-region-label').textContent = region.label.toUpperCase();
+  if (!activeProvinceIndex) { liveStatus.textContent = `Loading ${region.label} boundaries…`; return; }
+  const mode = harmonizationMode.value;
+  const rows = liveRows.filter((row) => pointInProvince(row.lon,row.lat) && (!row.last_fire || row.last_fire >= state.start) && (!row.first_fire || row.first_fire <= state.end) && (mode === 'harmonized' || (mode === 'modis' ? row.source.toUpperCase().includes('MODIS') : row.source.toUpperCase().includes('VIIRS')))).sort((x,y)=>(y.last_fire||'').localeCompare(x.last_fire||'')).slice(0,40);
+  liveFeed.replaceChildren();
+  if (!rows.length) { liveStatus.textContent = `No matching hotspot cells found for ${region.label} in the selected dates and sensor mode.`; return; }
+  liveStatus.textContent = `${rows.length} recent mapped hotspot cells · ${rows[0].year} archive`;
+  rows.forEach((row) => {
+    const item=document.createElement('li');item.className='live-feed-card';
+    const date=document.createElement('time');date.dateTime=row.last_fire;date.textContent=row.last_fire ? new Date(`${row.last_fire}T00:00:00Z`).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric',timeZone:'UTC'}) : 'Date unavailable';
+    const title=document.createElement('strong');title.textContent=`${row.source} · ${row.fire_days} fire days`;
+    const detail=document.createElement('span');detail.textContent=`${row.lat.toFixed(2)}°, ${row.lon.toFixed(2)}° · ${row.harmonized_cells} harmonized cell-days · ${Number(row.frp_total_mw).toLocaleString()} MW total FRP`;
+    item.append(date,title,detail);liveFeed.append(item);
+  });
+}
+
+function loadLiveYear() {
+  const year = Math.min(2025, Number(state.end.slice(0,4)) || 2025);
+  if (year === liveYearRequested) { renderLiveFeed(); return; }
+  liveYearRequested=year; liveStatus.textContent=`Loading recent ${year} hotspots…`;
+  const old=document.querySelector('#live-year-data');if(old)old.remove();
+  const script=document.createElement('script');script.id='live-year-data';script.src=`data/map-years/${year}.js`;
+  script.onload=()=>{if(liveYearRequested!==year)return;liveRows=(window.MOSAIC_YEAR_ROWS||[]).map(r=>({year:r[0],lat:r[1],lon:r[2],fire_days:r[3],harmonized_cells:r[4],frp_total_mw:r[5],first_fire:r[6],last_fire:r[7],source:r[8],peak_day:r[9]}));renderLiveFeed();};
+  script.onerror=()=>{liveStatus.textContent=`Could not load the ${year} hotspot archive.`;};document.head.append(script);
+}
+compareRegionA.addEventListener('change',renderComparison);compareRegionB.addEventListener('change',renderComparison);
+window.addEventListener('resize',renderComparison);
+window.addEventListener('filtersChanged',()=>{if(state.view==='compare')renderComparison();if(state.view==='live')loadLiveYear();});
+harmonizationMode.addEventListener('change',()=>{if(state.view==='compare')renderComparison();if(state.view==='live')renderLiveFeed();});
+window.addEventListener('viewChanged',(event)=>{const view=event.detail?.view||event.detail;if(view==='compare')requestAnimationFrame(renderComparison);if(view==='live')loadLiveYear();});
 function csvValue(value) {
   const text = String(value ?? '');
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
