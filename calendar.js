@@ -24,6 +24,7 @@
   const gridWrap = document.querySelector('#calendar-grid-wrap');
   const table = document.querySelector('#calendar-grid');
   const tooltip = document.querySelector('#calendar-tooltip');
+  const description = document.querySelector('#calendar-description');
   const legend = document.querySelector('#calendar-legend');
   if (!section || !status || !table) return;
 
@@ -45,9 +46,12 @@
   if (typeof window.getFireData !== 'function') {
     window.getFireData = async function getFireData(region, start, end) {
       const provinceMonths = window.MOSAIC_PROVINCE_MONTHS?.[region] || {};
+      const mode = document.querySelector('#harmonization-mode')?.value || 'harmonized';
+      const factors = window.MOSAIC_CALIBRATION_FACTORS || {};
       const records = Object.entries(provinceMonths)
         .filter(([month]) => month >= start.slice(0, 7) && month <= end.slice(0, 7))
-        .map(([month, count]) => ({ date: `${month}-01`, count }));
+        .filter(([month]) => mode === 'harmonized' || (mode === 'modis' ? Number(month.slice(0, 4)) <= 2011 : Number(month.slice(0, 4)) >= 2012))
+        .map(([month, harmonizedCount]) => ({ date: `${month}-01`, count: mode === 'modis' ? harmonizedCount / Number(factors[String(Number(month.slice(5, 7)))]) : harmonizedCount }));
       if (!Object.keys(provinceMonths).length) throw new Error(`No provincial calendar data found for ${region}`);
       return records;
     };
@@ -238,11 +242,19 @@
   async function renderCalendar() {
     if (section.hidden) return;
     const thisRender = ++renderNumber;
-    const { region, start, end } = latestFilters;
+    const { region } = latestFilters;
+    let { start, end } = latestFilters;
+    const mode = document.querySelector('#harmonization-mode')?.value || 'harmonized';
+    if (mode === 'modis' && end > '2011-12-31') end = '2011-12-31';
+    if (mode === 'viirs' && start < '2012-01-01') start = '2012-01-01';
     regionLabel.textContent = region.replaceAll('-', ' ').toUpperCase();
+    if (description) description.textContent = mode === 'harmonized'
+      ? 'Harmonized monthly activity for this province or territory. MODIS values before 2012 are calibrated to the VIIRS scale.'
+      : mode === 'modis'
+        ? 'MODIS-only monthly activity before 2012, shown on its uncalibrated sensor scale.'
+        : 'VIIRS-only monthly activity from 2012 onward.';
     status.hidden = false;
-    status.textContent = `Loading ${region.replaceAll('-', ' ')} monthly fire activity…`;
-    gridWrap.hidden = true;
+    status.textContent = `Loading ${region.replaceAll('-', ' ')} ${mode === 'harmonized' ? 'harmonized' : mode.toUpperCase()} calendar…`;    gridWrap.hidden = true;
     legend.hidden = true;
     hideTooltip();
 
@@ -269,6 +281,7 @@
   }
 
   connectTooltips();
+  document.querySelector('#harmonization-mode')?.addEventListener('change', () => { if (!section.hidden) renderCalendar(); });
 
   window.addEventListener('filtersChanged', (event) => {
     const details = event.detail || {};
