@@ -38,6 +38,10 @@ const REGION_BOUNDS = {
   yukon: [-141.1, 59.8, -123.8, 69.7],
 };
 
+// Keep map navigation and its widest zoom level within Canada's geographic
+// envelope. Province selection and hotspot filtering remain unchanged.
+const CANADA_MAP_BOUNDS = [[41.5, -141.5], [83.5, -51.5]];
+
 const CANADIAN_PLACES = [
   ['Vancouver', 49.2827, -123.1207, 'british-columbia'], ['Victoria', 48.4284, -123.3656, 'british-columbia'],
   ['Kelowna', 49.888, -119.496, 'british-columbia'], ['Calgary', 51.0447, -114.0719, 'alberta'], ['Edmonton', 53.5461, -113.4938, 'alberta'],
@@ -507,7 +511,11 @@ async function setMapMaximized(maximized) {
 
 document.addEventListener('fullscreenchange', () => {
   syncMapMaximizedState(document.fullscreenElement === mapPanel);
-  requestAnimationFrame(() => fireMap?.invalidateSize());
+  requestAnimationFrame(() => {
+    if (!fireMap) return;
+    fireMap.invalidateSize();
+    updateCanadaMapLimits();
+  });
 });
 
 mapExpandButton.addEventListener('click', () => setMapMaximized(!state.mapMaximized));
@@ -947,7 +955,12 @@ function syncSliderFromDates() {
 }
 
 if (window.L) {
-  fireMap = L.map('fire-map', { preferCanvas: true }).setView([62, -98], 3);
+  fireMap = L.map('fire-map', {
+    preferCanvas: true,
+    maxBounds: CANADA_MAP_BOUNDS,
+    maxBoundsViscosity: 1,
+    worldCopyJump: false,
+  }).setView([62, -98], 3);
   mapRenderer = L.canvas({ padding: .5, tolerance: 10 });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap contributors' }).addTo(fireMap);
   fireBoundaryLayer = L.layerGroup().addTo(fireMap);
@@ -957,7 +970,19 @@ if (window.L) {
   fireMap.on('click', (event) => {
     selectProvinceAt(event.latlng.lat, event.latlng.lng);
   });
-  window.addEventListener('resize', () => fireMap && fireMap.invalidateSize());
+  updateCanadaMapLimits();
+  window.addEventListener('resize', () => {
+    if (!fireMap) return;
+    fireMap.invalidateSize();
+    updateCanadaMapLimits();
+  });
+}
+
+function updateCanadaMapLimits() {
+  if (!fireMap) return;
+  const canadaFitZoom = fireMap.getBoundsZoom(CANADA_MAP_BOUNDS, false, [24, 24]);
+  fireMap.setMinZoom(Math.max(2, canadaFitZoom));
+  fireMap.setMaxBounds(CANADA_MAP_BOUNDS);
 }
 
 const mapSearchForm = document.querySelector('#map-search-form');
@@ -1002,7 +1027,7 @@ CONFIG.regions.forEach((region) => { const option = document.createElement('opti
 
 document.querySelector('#map-reset').addEventListener('click', () => {
   if (!fireMap) { renderVisibleMap(); mapSearchStatus.textContent = 'Map reset to the full Canada view. Select a province by clicking it on the map.'; return; }
-  fireMap.fitBounds([[41.5, -141.5], [83.5, -51.5]], { padding: [24, 24] });
+  fireMap.fitBounds(CANADA_MAP_BOUNDS, { padding: [24, 24] });
   mapSearchStatus.textContent = 'Map reset to the full Canada view. Click a province or territory to select it.';
 });
 
