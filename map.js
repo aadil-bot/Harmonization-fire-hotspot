@@ -470,18 +470,20 @@ function setMapMaximized(maximized) {
 
 mapExpandButton.addEventListener('click', () => setMapMaximized(!state.mapMaximized));
 
-const mapYear = document.querySelector('#map-year');
+const mapYearStart = document.querySelector('#map-year-start');
+const mapYearEnd = document.querySelector('#map-year-end');
 const harmonizationMode = document.querySelector('#harmonization-mode');
 const mapLegendTitle = document.querySelector('#map-legend-title');
-const mapYearValue = document.querySelector('#map-year-value');
+const mapYearStartValue = document.querySelector('#map-year-start-value');
+const mapYearEndValue = document.querySelector('#map-year-end-value');
 const mapDataStatus = document.querySelector('#map-data-status');
 let mapRows = [];
 let initialYearRows = window.MOSAIC_YEAR_ROWS || null;
 let fireMap = null;
 let fireLayer = null;
 let fireBoundaryLayer = null;
+let provinceClickableLayer = null;
 let mapRenderer = null;
-let requestedYear = 0;
 // Province shapes load on demand from Statistics Canada's 2021 generalized
 // province/territory boundaries; PRUID links each shape to the sidebar choice.
 let activeProvinceFeature = null;
@@ -728,7 +730,6 @@ function drawFallback(rows) {
 
 function renderVisibleMap(shouldZoom = false) {
   const rows = getVisibleRows();
-  const year = Number(mapYear.value);
   if (window.L && fireMap && fireLayer) {
     drawFireMap(rows);
     if (shouldZoom && activeProvinceFeature && fireBoundaryLayer.getLayers().length) {
@@ -740,39 +741,82 @@ function renderVisibleMap(shouldZoom = false) {
     drawFallback([]);
   }
   const region = CONFIG.regions.find((item) => item.value === state.region)?.label || state.region;
-  mapYearValue.value = String(year);
-  if (activeProvinceIndex) mapDataStatus.textContent = `${rows.length.toLocaleString()} ${harmonizationMode.options[harmonizationMode.selectedIndex].text.toLowerCase()} in ${region} · ${year}${rows.length ? ` · ${rows[0].source}` : ' · no records for this sensor/year'}`;
+  const yearLabel = `${mapYearStart.value}–${mapYearEnd.value}`;
+  if (activeProvinceIndex) mapDataStatus.textContent = `${rows.length.toLocaleString()} ${harmonizationMode.options[harmonizationMode.selectedIndex].text.toLowerCase()} in ${region} · ${yearLabel}${rows.length ? ` · ${rows[0].source}` : ' · no records in this range'}`;
 }
 
-function setRowsForYear(rows, year) {
-  mapRows = rows;
-  mapYearValue.value = String(year);
-  renderVisibleMap();
+const yearRowsCache = new Map();
+const yearRowsPending = new Map();
+const decodeYearRows = (rows) => (rows || []).map((r) => ({ year: r[0], lat: r[1], lon: r[2], fire_days: r[3], harmonized_cells: r[4], frp_total_mw: r[5], first_fire: r[6], last_fire: r[7], source: r[8], peak_day: r[9] }));
+if (initialYearRows) yearRowsCache.set(2023, decodeYearRows(initialYearRows));
+
+function getYearRows(year) {
+  if (yearRowsCache.has(year)) return Promise.resolve(yearRowsCache.get(year));
+  if (yearRowsPending.has(year)) return yearRowsPending.get(year);
+  const loading = new Promise((resolve, reject) => {
+    // Load sequentially because each archive publishes through the shared global.
+    const script = document.createElement('script');
+    script.src = `data/map-years/${year}.js`;
+    script.onload = () => {
+      const rows = decodeYearRows(window.MOSAIC_YEAR_ROWS);
+      yearRowsCache.set(year, rows);
+      resolve(rows);
+    };
+    script.onerror = () => reject(new Error(`Could not load ${year} fire data.`));
+    window.MOSAIC_YEAR_ROWS = null;
+    document.head.append(script);
+  }).finally(() => yearRowsPending.delete(year));
+  yearRowsPending.set(year, loading);
+  return loading;
 }
 
-function loadYear(year) {
-  requestedYear = year;
-  mapDataStatus.textContent = `Loading ${year} fire cells…`;
-  const previous = document.querySelector('#map-year-data');
-  if (previous) previous.remove();
-  if (initialYearRows && year === 2023) {
-    const rows = initialYearRows.map((r) => ({ year: r[0], lat: r[1], lon: r[2], fire_days: r[3], harmonized_cells: r[4], frp_total_mw: r[5], first_fire: r[6], last_fire: r[7], source: r[8], peak_day: r[9] }));
-    setRowsForYear(rows, year);
-    return;
+let requestedYearRange = '';
+async function loadYearRange() {
+  const startYear = Number(mapYearStart.value);
+  const endYear = Number(mapYearEnd.value);
+  const requestKey = `${startYear}:${endYear}:${harmonizationMode.value}`;
+  requestedYearRange = requestKey;
+  mapYearStartValue.value = String(startYear);
+  mapYearEndValue.value = String(endYear);
+  mapDataStatus.textContent = `Loading fire cells for ${startYear}–${endYear}…`;
+  try {
+    const years = [];
+    for (let year = startYear; year <= endYear; year += 1) years.push(year);
+    const collected = [];
+    for (const year of years) collected.push(...await getYearRows(year));
+    if (requestedYearRange !== requestKey) return;
+    mapRows = collected;
+    renderVisibleMap();
+  } catch (error) {
+    if (requestedYearRange === requestKey) mapDataStatus.textContent = `${error.message} Check that the selected year files are available.`;
   }
-  window.MOSAIC_YEAR_ROWS = null;
-  const script = document.createElement('script');
-  script.id = 'map-year-data';
-  script.src = `data/map-years/${year}.js`;
-  script.onload = () => {
-    if (requestedYear !== year) return;
-    const rows = (window.MOSAIC_YEAR_ROWS || []).map((r) => ({ year: r[0], lat: r[1], lon: r[2], fire_days: r[3], harmonized_cells: r[4], frp_total_mw: r[5], first_fire: r[6], last_fire: r[7], source: r[8], peak_day: r[9] }));
-    setRowsForYear(rows, year);
-  };
-  script.onerror = () => {
-    if (requestedYear === year) mapDataStatus.textContent = `Could not load ${year} fire data. Confirm data/map-years/${year}.js is deployed.`;
-  };
-  document.head.append(script);
+}
+
+function updateDateRangeFromSlider() {
+  const minAllowedYear = Number(mapYearStart.min);
+  let first = Number(mapYearStart.value);
+  let last = Number(mapYearEnd.value);
+  if (first > last) {
+    if (document.activeElement === mapYearStart) last = first;
+    else first = last;
+    mapYearStart.value = String(first);
+    mapYearEnd.value = String(last);
+  }
+  const today = localDateString();
+  controls.start.value = `${Math.max(first, 2000)}-01-01`;
+  if (controls.start.value < CONFIG.minDate) controls.start.value = CONFIG.minDate;
+  controls.end.value = `${last}-12-31` > today ? today : `${last}-12-31`;
+  if (controls.start.value < `${minAllowedYear}-01-01`) controls.start.value = `${minAllowedYear}-01-01`;
+  applyControlChange(controls.start);
+}
+
+function syncSliderFromDates() {
+  const lowerBound = Number(mapYearStart.min);
+  const upperBound = Number(mapYearStart.max);
+  const first = Math.min(upperBound, Math.max(lowerBound, Number(state.start.slice(0, 4)) || lowerBound));
+  const last = Math.min(upperBound, Math.max(lowerBound, Number(state.end.slice(0, 4)) || upperBound));
+  mapYearStart.value = String(Math.min(first, last));
+  mapYearEnd.value = String(Math.max(first, last));
 }
 
 if (window.L) {
@@ -781,6 +825,30 @@ if (window.L) {
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap contributors' }).addTo(fireMap);
   fireBoundaryLayer = L.layerGroup().addTo(fireMap);
   fireLayer = L.layerGroup().addTo(fireMap);
+  // A low-z-index province layer makes every province selectable, including
+  // remote northern islands that are difficult to target on the map canvas.
+  fireMap.createPane('provinceHitPane');
+  fireMap.getPane('provinceHitPane').style.zIndex = 350;
+  provinceClickableLayer = L.layerGroup().addTo(fireMap);
+  Promise.all(CONFIG.regions.map(async (region) => {
+    try {
+      const entry = await loadProvinceIndex(region);
+      const boundary = L.geoJSON(entry.feature, {
+        pane: 'provinceHitPane',
+        interactive: true,
+        style: { color: '#8c9a8e', weight: 1, opacity: .68, fillColor: '#425346', fillOpacity: .015 },
+        onEachFeature: (_feature, layer) => layer.on('click', (event) => {
+          if (event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
+          if (controls.region.value !== region.value) {
+            controls.region.value = region.value;
+            applyControlChange(controls.region);
+          }
+          mapSearchStatus.textContent = `${region.label} selected from the map.`;
+        }),
+      });
+      boundary.addTo(provinceClickableLayer);
+    } catch { /* Keep the rest of the province boundaries available. */ }
+  }));
   fireMap.on('click', (event) => {
     if (event.originalEvent?.target?.closest?.('.leaflet-interactive')) return;
     selectProvinceAt(event.latlng.lat, event.latlng.lng);
@@ -801,6 +869,23 @@ document.querySelector('#map-reset').addEventListener('click', () => {
   if (boundary) fireMap.fitBounds(boundary.getBounds(), { padding: [24, 24] });
   else fireMap.setView([53.5, -113.5], 5);
   mapSearchStatus.textContent = `Map reset to ${CONFIG.regions.find((region) => region.value === state.region)?.label || 'Canada'}.`;
+});
+
+// Keep the location search tucked behind an icon until the user needs it.
+const mapSearchToggle = document.querySelector('#map-search-toggle');
+function setSearchOpen(open) {
+  mapSearchForm.hidden = !open;
+  mapSearchToggle.setAttribute('aria-expanded', String(open));
+  mapSearchToggle.setAttribute('aria-label', open ? 'Close map search' : 'Open map search');
+  mapSearchToggle.title = open ? 'Close map search' : 'Search the map';
+  if (open) mapSearchInput.focus();
+}
+mapSearchToggle.addEventListener('click', () => setSearchOpen(mapSearchForm.hidden));
+mapSearchForm.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') { setSearchOpen(false); mapSearchToggle.focus(); }
+});
+document.addEventListener('pointerdown', (event) => {
+  if (!mapSearchForm.hidden && !event.target.closest('.map-location-controls')) setSearchOpen(false);
 });
 
 mapSearchForm.addEventListener('submit', async (event) => {
@@ -839,26 +924,39 @@ mapSearchForm.addEventListener('submit', async (event) => {
   mapSearchStatus.textContent = 'Location not found in the built-in Canadian place list. Try a province, listed city, or latitude, longitude.';
 });
 
-window.addEventListener('filtersChanged', () => setActiveProvince(true));
+window.addEventListener('filtersChanged', () => {
+  setActiveProvince(true);
+  syncSliderFromDates();
+  const key = `${mapYearStart.value}:${mapYearEnd.value}:${harmonizationMode.value}`;
+  if (key !== requestedYearRange) loadYearRange();
+  else renderVisibleMap();
+});
 window.addEventListener('viewChanged', (event) => { if ((event.detail?.view || event.detail) === 'map') { requestAnimationFrame(() => { if (fireMap) fireMap.invalidateSize(); renderVisibleMap(); }); } });
 harmonizationMode.addEventListener('change', () => {
   if (harmonizationMode.value === 'modis') {
-    mapYear.min = '2002'; mapYear.max = '2011';
-    if (+mapYear.value > 2011) mapYear.value = '2011';
     mapLegendTitle.textContent = 'MODIS HOTSPOTS · OBSERVED FIRE DAYS';
   } else if (harmonizationMode.value === 'viirs') {
-    mapYear.min = '2012'; mapYear.max = '2025';
-    if (+mapYear.value < 2012) mapYear.value = '2012';
     mapLegendTitle.textContent = 'VIIRS FIRE DAYS';
   } else {
-    mapYear.min = '2002'; mapYear.max = '2025';
     mapLegendTitle.textContent = 'HARMONIZED FIRE DAYS';
   }
-  loadYear(Number(mapYear.value));
+  loadYearRange();
 });
-mapYear.addEventListener('input', () => loadYear(Number(mapYear.value)));
+mapYearStart.addEventListener('input', () => {
+  if (+mapYearStart.value > +mapYearEnd.value) mapYearEnd.value = mapYearStart.value;
+  mapYearStartValue.value = mapYearStart.value;
+  mapYearEndValue.value = mapYearEnd.value;
+});
+mapYearEnd.addEventListener('input', () => {
+  if (+mapYearEnd.value < +mapYearStart.value) mapYearStart.value = mapYearEnd.value;
+  mapYearStartValue.value = mapYearStart.value;
+  mapYearEndValue.value = mapYearEnd.value;
+});
+mapYearStart.addEventListener('change', updateDateRangeFromSlider);
+mapYearEnd.addEventListener('change', updateDateRangeFromSlider);
 setActiveProvince(true);
-loadYear(Number(mapYear.value));
+syncSliderFromDates();
+loadYearRange();
 
 const compareRegionA = document.querySelector('#compare-region-a');
 const compareRegionB = document.querySelector('#compare-region-b');
@@ -996,10 +1094,8 @@ function loadLiveYear() {
   const year = Math.min(2025, Number(state.end.slice(0,4)) || 2025);
   if (year === liveYearRequested) { renderLiveFeed(); return; }
   liveYearRequested=year; liveStatus.textContent=`Loading recent ${year} hotspots…`;
-  const old=document.querySelector('#live-year-data');if(old)old.remove();
-  const script=document.createElement('script');script.id='live-year-data';script.src=`data/map-years/${year}.js`;
-  script.onload=()=>{if(liveYearRequested!==year)return;liveRows=(window.MOSAIC_YEAR_ROWS||[]).map(r=>({year:r[0],lat:r[1],lon:r[2],fire_days:r[3],harmonized_cells:r[4],frp_total_mw:r[5],first_fire:r[6],last_fire:r[7],source:r[8],peak_day:r[9]}));renderLiveFeed();};
-  script.onerror=()=>{liveStatus.textContent=`Could not load the ${year} hotspot archive.`;};document.head.append(script);
+  getYearRows(year).then((rows)=>{if(liveYearRequested!==year)return;liveRows=rows;renderLiveFeed();})
+    .catch(()=>{if(liveYearRequested===year)liveStatus.textContent=`Could not load the ${year} hotspot archive.`;});
 }
 compareRegionA.addEventListener('change',renderComparison);compareRegionB.addEventListener('change',renderComparison);
 window.addEventListener('resize',()=>{renderComparison();renderTrend();});
@@ -1018,7 +1114,7 @@ function downloadVisibleCsv() {
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   const link = document.createElement('a');
   link.href = url;
-  link.download = `${state.region}-${mapYear.value}-fire-hotspots.csv`;
+  link.download = `${state.region}-${mapYearStart.value}-${mapYearEnd.value}-fire-hotspots.csv`;
   document.body.append(link);
   link.click();
   link.remove();
