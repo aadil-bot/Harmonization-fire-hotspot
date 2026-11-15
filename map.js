@@ -619,10 +619,11 @@ function pointInIndex(index, lon, lat) {
 function pointInProvince(lon, lat) { return pointInIndex(activeProvinceIndex, lon, lat); }
 
 function focusMapOnSelectedProvince() {
-  const boundary = fireBoundaryLayer?.getLayers()[0];
-  if (!fireMap || !boundary) return false;
+  const bounds = REGION_BOUNDS[state.region];
+  if (!fireMap || !bounds) return false;
+  const [west, south, east, north] = bounds;
   fireMap.invalidateSize({ pan: false });
-  fireMap.fitBounds(boundary.getBounds(), {
+  fireMap.fitBounds([[south, west], [north, east]], {
     paddingTopLeft: [24, 64],
     paddingBottomRight: [24, 78],
     animate: false,
@@ -701,6 +702,14 @@ function setActiveProvince(shouldZoom = true) {
   if (window.L && fireMap && fireBoundaryLayer) {
     fireBoundaryLayer.clearLayers();
   }
+  if (shouldZoom && pendingMapPlace?.regionValue === region.value && fireMap) {
+    fireMap.setView([pendingMapPlace.lat, pendingMapPlace.lon], pendingMapPlace.zoom, { animate: false });
+    pendingMapPlace = null;
+  } else if (shouldZoom) {
+    // Focus immediately from configured province bounds. Detailed boundary
+    // files can be several megabytes and take longer to index.
+    focusMapOnSelectedProvince();
+  }
   mapDataStatus.textContent = `Loading ${region.label} boundaries…`;
   renderVisibleMap();
 
@@ -714,14 +723,6 @@ function setActiveProvince(shouldZoom = true) {
         style: { color: '#92a18f', weight: 1.2, opacity: 0.8, fillColor: '#405b45', fillOpacity: 0.13 },
       });
       boundary.addTo(fireBoundaryLayer);
-      if (shouldZoom && pendingMapPlace?.regionValue === region.value) {
-        fireMap.setView([pendingMapPlace.lat, pendingMapPlace.lon], pendingMapPlace.zoom);
-        pendingMapPlace = null;
-      } else if (shouldZoom) {
-        // Wait for Leaflet to measure the visible map. This also handles a
-        // map opened from the initially hidden calendar view.
-        requestAnimationFrame(() => requestAnimationFrame(() => focusMapOnSelectedProvince()));
-      }
     }
     renderVisibleMap();
     if(state.view==='live') renderLiveFeed();
@@ -1100,11 +1101,6 @@ mapYearEnd.addEventListener('input', () => {
 mapYearStart.addEventListener('change', updateDateRangeFromSlider);
 mapYearEnd.addEventListener('change', updateDateRangeFromSlider);
 setActiveProvince(true);
-// The entry view can finish its short fade after the boundary script loads;
-// make one final focus pass once that layout animation has settled.
-window.setTimeout(() => {
-  if (state.view === 'map') focusMapOnSelectedProvince();
-}, 280);
 syncSliderFromDates();
 loadYearRange();
 
