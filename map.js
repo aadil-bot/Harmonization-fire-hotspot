@@ -26,6 +26,27 @@ const CONFIG = {
   ],
 };
 
+const REGION_BOUNDS = {
+  alberta: [-120.1, 48.9, -109.9, 60.1], 'british-columbia': [-139.1, 48.2, -114.0, 60.1],
+  manitoba: [-102.1, 48.9, -88.9, 60.1], 'new-brunswick': [-69.2, 44.5, -63.7, 48.1],
+  'newfoundland-and-labrador': [-67.9, 46.5, -52.5, 60.5], 'northwest-territories': [-136.5, 59.9, -101.8, 78.8],
+  'nova-scotia': [-66.5, 43.3, -59.7, 47.2], nunavut: [-120.0, 51.0, -61.0, 83.2],
+  ontario: [-95.2, 41.6, -74.2, 56.9], 'prince-edward-island': [-64.5, 45.9, -61.9, 47.1],
+  quebec: [-79.9, 44.9, -57.0, 62.7], saskatchewan: [-110.1, 48.9, -101.3, 60.1],
+  yukon: [-141.1, 59.8, -123.8, 69.7],
+};
+
+const CANADIAN_PLACES = [
+  ['Vancouver', 49.2827, -123.1207, 'british-columbia'], ['Victoria', 48.4284, -123.3656, 'british-columbia'],
+  ['Kelowna', 49.888, -119.496, 'british-columbia'], ['Calgary', 51.0447, -114.0719, 'alberta'], ['Edmonton', 53.5461, -113.4938, 'alberta'],
+  ['Regina', 50.4452, -104.6189, 'saskatchewan'], ['Saskatoon', 52.1332, -106.67, 'saskatchewan'], ['Winnipeg', 49.8951, -97.1384, 'manitoba'],
+  ['Toronto', 43.6532, -79.3832, 'ontario'], ['Ottawa', 45.4215, -75.6972, 'ontario'], ['Thunder Bay', 48.3809, -89.2477, 'ontario'],
+  ['Montreal', 45.5019, -73.5674, 'quebec'], ['Quebec City', 46.8139, -71.208, 'quebec'], ['Fredericton', 45.9636, -66.6431, 'new-brunswick'],
+  ['Halifax', 44.6488, -63.5752, 'nova-scotia'], ['Charlottetown', 46.2382, -63.1311, 'prince-edward-island'],
+  ['St. John\'s', 47.5615, -52.7126, 'newfoundland-and-labrador'], ['Yellowknife', 62.454, -114.3718, 'northwest-territories'],
+  ['Whitehorse', 60.7212, -135.0568, 'yukon'], ['Iqaluit', 63.7467, -68.517, 'nunavut'],
+];
+
 // This object is the live page state shared with map and calendar modules.
 const state = { region: 'alberta', start: '', end: '', role: 'general-view', view: 'map', mapMaximized: false, mobileSidebarOpen: false, sidebarWidth: null };
 
@@ -369,6 +390,7 @@ function setActiveView(viewName, announce = true) {
   // Repaint size-dependent content only after the selected section is visible.
   if (viewName === 'compare') requestAnimationFrame(() => renderComparison());
   if (viewName === 'live') requestAnimationFrame(() => loadLiveYear());
+  if (viewName === 'trend') requestAnimationFrame(() => renderTrend());
 }
 
 function openMenu() {
@@ -451,6 +473,7 @@ let requestedYear = 0;
 let activeProvinceFeature = null;
 let activeProvinceIndex = null;
 let activeRegionValue = null;
+let pendingMapPlace = null;
 const provinceIndexes = new Map();
 const pendingProvinceLoads = new Map();
 
@@ -523,9 +546,9 @@ function pointInRing(lon, lat, ring) {
   return inside;
 }
 
-function pointInProvince(lon, lat) {
-  if (!activeProvinceIndex) return false;
-  const { buckets, bucketSize } = activeProvinceIndex;
+function pointInIndex(index, lon, lat) {
+  if (!index) return false;
+  const { buckets, bucketSize } = index;
   const candidates = buckets.get(`${Math.floor(lon / bucketSize)}:${Math.floor(lat / bucketSize)}`) || [];
   return candidates.some((polygon) => {
     const b = polygon.bounds;
@@ -533,6 +556,31 @@ function pointInProvince(lon, lat) {
     if (!pointInRing(lon, lat, polygon.rings[0])) return false;
     return !polygon.rings.slice(1).some((hole) => pointInRing(lon, lat, hole));
   });
+}
+
+function pointInProvince(lon, lat) { return pointInIndex(activeProvinceIndex, lon, lat); }
+
+async function selectProvinceAt(lat, lon) {
+  document.querySelector('#map-search-status').textContent = 'Checking which province or territory contains that point…';
+  const candidates = CONFIG.regions.filter((region) => {
+    const [west, south, east, north] = REGION_BOUNDS[region.value];
+    return lon >= west && lon <= east && lat >= south && lat <= north;
+  }).sort((a, b) => {
+    const area = (region) => { const [w, s, e, n] = REGION_BOUNDS[region.value]; return (e - w) * (n - s); };
+    return area(a) - area(b);
+  });
+  for (const region of candidates) {
+    try {
+      const entry = await loadProvinceIndex(region);
+      if (pointInIndex(entry.index, lon, lat)) {
+        controls.region.value = region.value;
+        applyControlChange(controls.region);
+        document.querySelector('#map-search-status').textContent = `${region.label} selected from the map.`;
+        return;
+      }
+    } catch { /* Keep checking other overlapping province bounds. */ }
+  }
+  document.querySelector('#map-search-status').textContent = 'No Canadian province or territory was found at that point.';
 }
 
 function setActiveProvince(shouldZoom = true) {
@@ -561,7 +609,10 @@ function setActiveProvince(shouldZoom = true) {
         style: { color: '#92a18f', weight: 1.2, opacity: 0.8, fillColor: '#405b45', fillOpacity: 0.13 },
       });
       boundary.addTo(fireBoundaryLayer);
-      if (shouldZoom) fireMap.fitBounds(boundary.getBounds(), { padding: [24, 24] });
+      if (shouldZoom && pendingMapPlace?.regionValue === region.value) {
+        fireMap.setView([pendingMapPlace.lat, pendingMapPlace.lon], pendingMapPlace.zoom);
+        pendingMapPlace = null;
+      } else if (shouldZoom) fireMap.fitBounds(boundary.getBounds(), { padding: [24, 24] });
     }
     renderVisibleMap();
     if(state.view==='live') renderLiveFeed();
@@ -596,7 +647,7 @@ function drawFireMap(rows) {
     L.circleMarker([row.lat, row.lon], {
       renderer: mapRenderer, radius, color: '#371e17', weight: .35,
       fillColor: colour.color, fillOpacity: colour.opacity,
-    }).bindPopup(`<strong>${row.year} · ${row.source}</strong><br>${harmonizationMode.value === 'harmonized' ? 'Harmonized fire cells' : 'Sensor fire days'}: ${activity}<br>${harmonizationMode.value === 'modis' ? 'MODIS before 2012 is calibrated for harmonized comparisons.' : ''}<br>Active: ${row.first_fire} → ${row.last_fire}<br>Total fire radiative power: ${Number(row.frp_total_mw).toLocaleString()} MW<br>Peak day: ${row.peak_day}`).addTo(fireLayer);
+    }).bindPopup(`<strong>Fire type: satellite active-fire hotspot</strong><br>Detection source: ${row.source}<br>Location: ${row.lat.toFixed(2)}°, ${row.lon.toFixed(2)}°<br>${harmonizationMode.value === 'harmonized' ? 'Harmonized fire-cell activity' : 'Sensor fire days'}: ${activity}<br>Observed dates: ${row.first_fire} to ${row.last_fire} (daily data; time of day not provided)<br>Detection confidence: not included in this source archive<br>Fire radiative power (total): ${Number(row.frp_total_mw).toLocaleString()} MW<br>Peak day: ${row.peak_day}<br>This hotspot is not a confirmed fire perimeter. The archive does not distinguish wildfire from prescribed fire.${harmonizationMode.value === 'modis' ? '<br>MODIS before 2012 is calibrated for harmonized comparisons.' : ''}`).addTo(fireLayer);
   });
 }
 
@@ -716,8 +767,63 @@ if (window.L) {
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap contributors' }).addTo(fireMap);
   fireBoundaryLayer = L.layerGroup().addTo(fireMap);
   fireLayer = L.layerGroup().addTo(fireMap);
+  fireMap.on('click', (event) => {
+    if (event.originalEvent?.target?.closest?.('.leaflet-interactive')) return;
+    selectProvinceAt(event.latlng.lat, event.latlng.lng);
+  });
   window.addEventListener('resize', () => fireMap && fireMap.invalidateSize());
 }
+
+const mapSearchForm = document.querySelector('#map-search-form');
+const mapSearchInput = document.querySelector('#map-search');
+const mapSearchStatus = document.querySelector('#map-search-status');
+const placesList = document.querySelector('#canadian-places');
+CANADIAN_PLACES.forEach(([name]) => { const option = document.createElement('option'); option.value = name; placesList.append(option); });
+CONFIG.regions.forEach((region) => { const option = document.createElement('option'); option.value = region.label; placesList.append(option); });
+
+document.querySelector('#map-reset').addEventListener('click', () => {
+  if (!fireMap) { mapSearchStatus.textContent = 'Map controls are unavailable because the interactive map library did not load.'; return; }
+  const boundary = fireBoundaryLayer?.getLayers()[0];
+  if (boundary) fireMap.fitBounds(boundary.getBounds(), { padding: [24, 24] });
+  else fireMap.setView([53.5, -113.5], 5);
+  mapSearchStatus.textContent = `Map reset to ${CONFIG.regions.find((region) => region.value === state.region)?.label || 'Canada'}.`;
+});
+
+mapSearchForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const query = mapSearchInput.value.trim();
+  if (!query) { mapSearchStatus.textContent = 'Enter a Canadian city, province or territory, or latitude and longitude.'; return; }
+  const coords = query.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+  if (coords) {
+    const lat = Number(coords[1]), lon = Number(coords[2]);
+    if (lat < 41 || lat > 84 || lon < -142 || lon > -51) { mapSearchStatus.textContent = 'Those coordinates are outside Canada.'; return; }
+    fireMap?.setView([lat, lon], 9);
+    mapSearchStatus.textContent = `Showing ${lat.toFixed(3)}°, ${lon.toFixed(3)}°.`;
+    return;
+  }
+  const normalized = query.toLocaleLowerCase('en-CA');
+  const region = CONFIG.regions.find((item) => item.label.toLocaleLowerCase('en-CA') === normalized || item.value.replaceAll('-', ' ') === normalized);
+  if (region) {
+    controls.region.value = region.value;
+    applyControlChange(controls.region);
+    mapSearchStatus.textContent = `${region.label} selected.`;
+    return;
+  }
+  const place = CANADIAN_PLACES.find(([name]) => name.toLocaleLowerCase('en-CA') === normalized);
+  if (place) {
+    const [name, lat, lon, regionValue] = place;
+    if (controls.region.value !== regionValue) {
+      controls.region.value = regionValue;
+      pendingMapPlace = { regionValue, lat, lon, zoom: 9 };
+      applyControlChange(controls.region);
+    } else {
+      fireMap?.setView([lat, lon], 9);
+    }
+    mapSearchStatus.textContent = `Showing ${name}, ${CONFIG.regions.find((item) => item.value === regionValue).label}.`;
+    return;
+  }
+  mapSearchStatus.textContent = 'Location not found in the built-in Canadian place list. Try a province, listed city, or latitude, longitude.';
+});
 
 window.addEventListener('filtersChanged', () => setActiveProvince(true));
 window.addEventListener('viewChanged', (event) => { if ((event.detail?.view || event.detail) === 'map') { requestAnimationFrame(() => { if (fireMap) fireMap.invalidateSize(); renderVisibleMap(); }); } });
@@ -746,6 +852,8 @@ const compareCanvas = document.querySelector('#compare-chart');
 const compareSummary = document.querySelector('#compare-summary');
 const compareLegendA = document.querySelector('#compare-legend-a');
 const compareLegendB = document.querySelector('#compare-legend-b');
+const trendCanvas = document.querySelector('#trend-chart');
+const trendSummary = document.querySelector('#trend-summary');
 const liveFeed = document.querySelector('#live-feed');
 const liveStatus = document.querySelector('#live-status');
 let liveRows = [];
@@ -777,6 +885,60 @@ function monthlySeries(regionValue) {
   return values;
 }
 
+function annualSeries(regionValue) {
+  const source = window.MOSAIC_PROVINCE_MONTHS?.[regionValue] || {};
+  const mode = harmonizationMode.value;
+  const factors = window.MOSAIC_CALIBRATION_FACTORS || {};
+  const annual = new Map();
+  Object.entries(source).forEach(([month, harmonizedValue]) => {
+    const year = Number(month.slice(0, 4)), monthNumber = Number(month.slice(5, 7));
+    if (month < state.start.slice(0, 7) || month > state.end.slice(0, 7)) return;
+    if (mode === 'modis' && year > 2011) return;
+    if (mode === 'viirs' && year < 2012) return;
+    const value = mode === 'modis' ? harmonizedValue / Number(factors[String(monthNumber)]) : harmonizedValue;
+    annual.set(year, (annual.get(year) || 0) + value);
+  });
+  return [...annual.entries()].sort(([a], [b]) => a - b);
+}
+
+function renderTrend() {
+  if (!trendCanvas || !trendSummary) return;
+  const region = CONFIG.regions.find((item) => item.value === state.region);
+  const points = annualSeries(state.region);
+  const total = points.reduce((sum, [, value]) => sum + value, 0);
+  const activityMode = harmonizationMode.selectedOptions[0]?.textContent || 'Harmonized Activity';
+  trendSummary.textContent = `${region.label} · ${state.start} to ${state.end} · ${activityMode} · ${Math.round(total).toLocaleString()} total activity across ${points.length} years`;
+  const box = trendCanvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  trendCanvas.width = Math.max(1, box.width * dpr); trendCanvas.height = Math.max(1, box.height * dpr);
+  const ctx = trendCanvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, box.width, box.height);
+  const pad = { left: 62, right: 20, top: 24, bottom: 42 }, width = box.width - pad.left - pad.right, height = box.height - pad.top - pad.bottom;
+  const max = Math.max(1, ...points.map(([, value]) => value));
+  ctx.font = '12px sans-serif'; ctx.fillStyle = '#aeb8af'; ctx.strokeStyle = '#3a443d'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i += 1) {
+    const y = pad.top + height * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(box.width - pad.right, y); ctx.stroke();
+    ctx.textAlign = 'right'; ctx.fillText(Math.round(max * (1 - i / 4)).toLocaleString(), pad.left - 9, y + 4);
+  }
+  if (points.length) {
+    const xAt = (index) => pad.left + (points.length === 1 ? width / 2 : width * index / (points.length - 1));
+    const yAt = (value) => pad.top + height * (1 - value / max);
+    ctx.strokeStyle = '#ff7438'; ctx.lineWidth = 3; ctx.beginPath();
+    points.forEach(([, value], index) => { if (index === 0) ctx.moveTo(xAt(index), yAt(value)); else ctx.lineTo(xAt(index), yAt(value)); });
+    ctx.stroke(); ctx.fillStyle = '#ff9b5f';
+    points.forEach(([year, value], index) => {
+      ctx.beginPath(); ctx.arc(xAt(index), yAt(value), 3, 0, Math.PI * 2); ctx.fill();
+      const labelEvery = Math.max(1, Math.ceil(points.length / 12));
+      if (index % labelEvery === 0 || index === points.length - 1) {
+        ctx.textAlign = 'center'; ctx.fillStyle = '#aeb8af'; ctx.fillText(String(year), xAt(index), box.height - 15); ctx.fillStyle = '#ff9b5f';
+      }
+    });
+  } else {
+    ctx.textAlign = 'center'; ctx.fillStyle = '#aeb8af'; ctx.fillText('No activity records in this date range and sensor mode.', box.width / 2, box.height / 2);
+  }
+  ctx.textAlign = 'left';
+}
+
 function renderComparison() {
   if (!compareCanvas || !compareRegionA.value || !compareRegionB.value) return;
   const a = monthlySeries(compareRegionA.value), b = monthlySeries(compareRegionB.value);
@@ -785,7 +947,7 @@ function renderComparison() {
   compareLegendA.textContent = names[0];
   compareLegendB.textContent = names[1];
   const activityMode = harmonizationMode.selectedOptions[0]?.textContent || 'Harmonized Activity';
-  compareSummary.textContent = `Period: ${state.start} to ${state.end} · Measure: total monthly ${activityMode.toLowerCase()} · ${names[0]}: ${Math.round(totals[0]).toLocaleString()} · ${names[1]}: ${Math.round(totals[1]).toLocaleString()}`;
+  compareSummary.textContent = `Period: ${state.start} to ${state.end} · Measure: total monthly ${activityMode.toLowerCase()} (months overlapping this range) · ${names[0]}: ${Math.round(totals[0]).toLocaleString()} · ${names[1]}: ${Math.round(totals[1]).toLocaleString()}`;
   const box = compareCanvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
   compareCanvas.width = Math.max(1, box.width * dpr); compareCanvas.height = Math.max(1, box.height * dpr);
   const ctx = compareCanvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, box.width, box.height);
@@ -826,9 +988,9 @@ function loadLiveYear() {
   script.onerror=()=>{liveStatus.textContent=`Could not load the ${year} hotspot archive.`;};document.head.append(script);
 }
 compareRegionA.addEventListener('change',renderComparison);compareRegionB.addEventListener('change',renderComparison);
-window.addEventListener('resize',renderComparison);
-window.addEventListener('filtersChanged',()=>{if(state.view==='compare')renderComparison();if(state.view==='live')loadLiveYear();});
-harmonizationMode.addEventListener('change',()=>{if(state.view==='compare')renderComparison();if(state.view==='live')renderLiveFeed();});
+window.addEventListener('resize',()=>{renderComparison();renderTrend();});
+window.addEventListener('filtersChanged',()=>{if(state.view==='compare')renderComparison();if(state.view==='live')loadLiveYear();if(state.view==='trend')renderTrend();});
+harmonizationMode.addEventListener('change',()=>{if(state.view==='compare')renderComparison();if(state.view==='live')renderLiveFeed();if(state.view==='trend')renderTrend();});
 function csvValue(value) {
   const text = String(value ?? '');
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;

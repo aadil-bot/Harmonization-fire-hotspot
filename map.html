@@ -7,15 +7,15 @@
   <meta name="description" content="MOSAIC — MODIS-VIIRS Observation Synthesis for Activity and Intensity Calendars. Explore harmonized satellite fire hotspot activity.">
   <title>MOSAIC — Fire activity map</title>
   <link rel="stylesheet" href="calendar.css">
-  <link rel="stylesheet" href="map.css?v=9">
+  <link rel="stylesheet" href="map.css?v=10">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
-  <link rel="stylesheet" href="insights.css?v=3">
+  <link rel="stylesheet" href="insights.css?v=4">
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous" defer></script>
   <script src="calendar-data.js?v=5" defer></script>
   <script src="data/canada/province_monthly.js?v=1" defer></script>
   <script src="data/calibration_factors.js?v=1" defer></script>
   <script src="data/map-years/2023.js?v=5" defer></script>
-  <script src="map.js?v=9" defer></script>
+  <script src="map.js?v=10" defer></script>
   <script src="calendar.js?v=6" defer></script>
   <script src="insights.js?v=5" defer></script>
 </head>
@@ -38,6 +38,7 @@
           </button>
           <div id="menu" class="menu" role="menu" aria-label="Main views" hidden>
             <button class="menu-item is-active" id="menu-map" type="button" role="menuitem" data-view="map" aria-current="page">Map view</button>
+            <button class="menu-item" id="menu-trend" type="button" role="menuitem" data-view="trend">Regional trends</button>
             <button class="menu-item" id="menu-calendar" type="button" role="menuitem" data-view="calendar">Historical activity calendar</button>
             <button class="menu-item" id="menu-compare" type="button" role="menuitem" data-view="compare">Regional comparison</button>
             <button class="menu-item" id="menu-live" type="button" role="menuitem" data-view="live">Live hotspot detections</button>
@@ -94,6 +95,11 @@
         <section class="content-view map-view" id="view-map" aria-label="Map view">
         <section class="map-panel" aria-label="Fire hotspot map">
           <div class="map-topline"><div><span class="live-dot" aria-hidden="true"></span><span id="map-region-label">ALBERTA</span></div><div class="map-topline-actions"><span class="map-layer-label" id="map-layer-label">ACTIVE FIRE HOTSPOTS <span>·</span> MODIS + VIIRS</span><button id="map-expand" class="map-expand-button" type="button" aria-label="Maximize map" aria-pressed="false" title="Maximize map"><span aria-hidden="true">⛶</span></button></div></div>
+          <div class="map-location-controls">
+            <form id="map-search-form" role="search"><label class="visually-hidden" for="map-search">Search a Canadian location or coordinates</label><input id="map-search" type="search" placeholder="Search city, province, or lat, lon" list="canadian-places" autocomplete="off"><datalist id="canadian-places"></datalist><button type="submit">Search</button></form>
+            <button id="map-reset" type="button">Reset map</button>
+            <span id="map-search-status" role="status" aria-live="polite">Drag to pan · scroll or use +/− to zoom · click a hotspot or province</span>
+          </div>
           <div class="map-data-controls"><label for="map-year">Map year</label><input id="map-year" type="range" min="2002" max="2025" value="2023"><output id="map-year-value" for="map-year">2023</output><span id="map-data-status" role="status">Loading Canadian fire cells…</span></div><div id="fire-map" role="region" aria-label="Interactive map of Canadian harmonized fire activity"></div>
           <div class="map-legend" aria-label="Map legend"><span class="legend-title" id="map-legend-title">HARMONIZED FIRE DAYS</span><span><i class="legend-dot low"></i>LOW</span><span><i class="legend-dot medium"></i>MEDIUM</span><span><i class="legend-dot high"></i>HIGH</span></div>
         </section>
@@ -125,6 +131,12 @@
               <div class="legend-names"><span>Low</span><span>Moderate</span><span>Elevated</span><span>High</span></div>
             </div>
           </div>
+        </section>
+        <section class="content-view analysis-view" id="view-trend" aria-labelledby="trend-title" hidden>
+          <div class="analysis-heading"><p class="eyebrow">PROVINCIAL HISTORY</p><h1 id="trend-title">Regional fire activity trend</h1><p>Monthly activity is grouped by year for the selected province or territory. The chart uses monthly records that overlap the selected date range.</p></div>
+          <div id="trend-summary" class="compare-summary" role="status" aria-live="polite"></div>
+          <div class="chart-wrap trend-chart-wrap"><canvas id="trend-chart" aria-label="Annual fire activity trend for the selected province or territory"></canvas></div>
+          <p class="analysis-note">Each point is the sum of monthly fire-cell activity for one year. The current provincial archive starts in 2002; years without records are not shown. Change the province, dates, or sensor mode in the sidebar to update this chart.</p>
         </section>
         <section class="content-view analysis-view" id="view-compare" aria-labelledby="compare-title" hidden>
           <div class="analysis-heading"><p class="eyebrow">ACROSS REGIONS</p><h1 id="compare-title">Compare fire activity</h1><p>Compare the total monthly harmonized fire-cell activity for two provinces or territories over the date range selected in the sidebar.</p></div>
