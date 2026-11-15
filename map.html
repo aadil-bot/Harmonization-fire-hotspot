@@ -154,10 +154,17 @@
           </div>
         </section>
         <section class="content-view analysis-view" id="view-trend" aria-labelledby="trend-title" hidden>
-          <div class="analysis-heading"><p class="eyebrow">PROVINCIAL HISTORY</p><h1 id="trend-title">Regional fire activity trend</h1><p>Monthly activity is grouped by year for the selected province or territory. The chart uses monthly records that overlap the selected date range.</p></div>
+          <div class="analysis-heading"><p class="eyebrow">PROVINCIAL HISTORY</p><h1 id="trend-title">Regional fire activity trends</h1><p>Explore annual totals, monthly seasonality, historical baselines, and anomalies for the selected province or territory.</p></div>
+          <div class="trend-controls">
+            <label>Chart view<select id="trend-display"><option value="annual">Annual activity</option><option value="seasonal">Monthly seasonality</option></select></label>
+            <label>Historical baseline<select id="trend-baseline"><option value="5" selected>Previous 5 years</option><option value="10">Previous 10 years</option><option value="all">All previous years</option></select></label>
+            <label class="trend-raw-toggle"><input id="trend-show-raw" type="checkbox"><span>Compare raw and harmonized</span></label>
+          </div>
+          <div id="trend-metrics" class="trend-metrics" aria-label="Historical trend statistics"></div>
           <div id="trend-summary" class="compare-summary" role="status" aria-live="polite"></div>
-          <div class="chart-wrap trend-chart-wrap"><canvas id="trend-chart" aria-label="Annual fire activity trend for the selected province or territory"></canvas></div>
-          <p class="analysis-note">Each point is the sum of monthly fire-cell activity for one year. The current provincial archive starts in 2002; years without records are not shown. Change the province, dates, or sensor mode in the sidebar to update this chart.</p>
+          <div class="trend-legend" id="trend-legend" aria-label="Trend chart legend"></div>
+          <div class="chart-wrap trend-chart-wrap"><canvas id="trend-chart" tabindex="0" aria-label="Interactive fire activity trend. Use arrow keys to select a year; hover or click data points for details."></canvas><div id="trend-tooltip" class="trend-tooltip" role="status" hidden></div></div>
+          <p class="analysis-note" id="trend-note">The annual view compares activity with a historical baseline. Select monthly seasonality to see the fire pattern through the year.</p>
         </section>
         <section class="content-view analysis-view" id="view-compare" aria-labelledby="compare-title" hidden>
           <div class="analysis-heading"><p class="eyebrow">ACROSS REGIONS</p><h1 id="compare-title">Compare fire activity</h1><p>Compare the total monthly harmonized fire-cell activity for two provinces or territories over the date range selected in the sidebar.</p></div>

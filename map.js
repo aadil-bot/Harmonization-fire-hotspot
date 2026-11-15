@@ -1005,10 +1005,19 @@ const compareLegendA = document.querySelector('#compare-legend-a');
 const compareLegendB = document.querySelector('#compare-legend-b');
 const trendCanvas = document.querySelector('#trend-chart');
 const trendSummary = document.querySelector('#trend-summary');
+const trendDisplay = document.querySelector('#trend-display');
+const trendBaseline = document.querySelector('#trend-baseline');
+const trendShowRaw = document.querySelector('#trend-show-raw');
+const trendMetrics = document.querySelector('#trend-metrics');
+const trendLegend = document.querySelector('#trend-legend');
+const trendTooltip = document.querySelector('#trend-tooltip');
+const trendNote = document.querySelector('#trend-note');
 const liveFeed = document.querySelector('#live-feed');
 const liveStatus = document.querySelector('#live-status');
 let liveRows = [];
 let liveYearRequested = null;
+let trendHits = [];
+let selectedTrendYear = null;
 
 function fillRegionSelect(select, selectedValue) {
   CONFIG.regions.forEach((region) => {
@@ -1036,58 +1045,153 @@ function monthlySeries(regionValue) {
   return values;
 }
 
-function annualSeries(regionValue) {
+function annualSeries(regionValue, raw = false) {
   const source = window.MOSAIC_PROVINCE_MONTHS?.[regionValue] || {};
   const mode = harmonizationMode.value;
   const factors = window.MOSAIC_CALIBRATION_FACTORS || {};
   const annual = new Map();
+  const firstYear = Math.max(2002, Number(state.start.slice(0, 4)), mode === 'viirs' ? 2012 : 2002);
+  const lastYear = Math.min(2025, Number(state.end.slice(0, 4)), mode === 'modis' ? 2011 : 2025);
+  for (let year = firstYear; year <= lastYear; year += 1) annual.set(year, { year, total: 0, months: Array(12).fill(0) });
   Object.entries(source).forEach(([month, harmonizedValue]) => {
     const year = Number(month.slice(0, 4)), monthNumber = Number(month.slice(5, 7));
     if (month < state.start.slice(0, 7) || month > state.end.slice(0, 7)) return;
     if (mode === 'modis' && year > 2011) return;
     if (mode === 'viirs' && year < 2012) return;
-    const value = mode === 'modis' ? harmonizedValue / Number(factors[String(monthNumber)]) : harmonizedValue;
-    annual.set(year, (annual.get(year) || 0) + value);
+    const value = raw && year <= 2011 ? harmonizedValue / (Number(factors[String(monthNumber)]) || 1) : Number(harmonizedValue) || 0;
+    const record = annual.get(year);
+    if (!record) return;
+    record.total += value;
+    record.months[monthNumber - 1] += value;
   });
-  return [...annual.entries()].sort(([a], [b]) => a - b);
+  return [...annual.values()].sort((a, b) => a.year - b.year);
 }
+
+function trendMean(values) { return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0; }
+function trendMedian(values) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b), middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+function trendNumber(value) { return Math.round(value).toLocaleString(); }
 
 function renderTrend() {
   if (!trendCanvas || !trendSummary) return;
   const region = CONFIG.regions.find((item) => item.value === state.region);
-  const points = annualSeries(state.region);
-  const total = points.reduce((sum, [, value]) => sum + value, 0);
-  const activityMode = harmonizationMode.selectedOptions[0]?.textContent || 'Harmonized Activity';
-  trendSummary.textContent = `${region.label} · ${state.start} to ${state.end} · ${activityMode} · ${Math.round(total).toLocaleString()} total activity across ${points.length} years`;
+  const primaryIsRaw = harmonizationMode.value !== 'harmonized';
+  const primary = annualSeries(state.region, primaryIsRaw);
+  const comparison = trendShowRaw.checked ? annualSeries(state.region, !primaryIsRaw) : [];
+  const modeLabel = harmonizationMode.selectedOptions[0]?.textContent || 'Harmonized Activity';
+  const years = primary.map((entry) => entry.year);
+  if (!years.includes(selectedTrendYear)) selectedTrendYear = years.at(-1) ?? null;
+  const selectedIndex = primary.findIndex((entry) => entry.year === selectedTrendYear);
+  const selected = primary[selectedIndex];
+  const baselineLimit = trendBaseline.value === 'all' ? primary.length : Number(trendBaseline.value);
+  const baseline = selected ? primary.slice(Math.max(0, selectedIndex - baselineLimit), selectedIndex) : [];
+  const baselineTotals = baseline.map((entry) => entry.total);
+  const average = trendMean(baselineTotals), historicalMedian = trendMedian(baselineTotals);
+  const deviation = Math.sqrt(trendMean(baselineTotals.map((value) => (value - average) ** 2)));
+  const anomaly = deviation ? (selected.total - average) / deviation : null;
+  const percentage = average ? ((selected.total - average) / average) * 100 : null;
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const seasons = [
+    ['Winter', [11, 0, 1]], ['Spring', [2, 3, 4]], ['Summer', [5, 6, 7]], ['Fall', [8, 9, 10]],
+  ].map(([name, months]) => ({ name, total: months.reduce((sum, month) => sum + (selected?.months[month] || 0), 0) }));
+  const peakSeason = seasons.reduce((peak, season) => season.total > peak.total ? season : peak, { name: '—', total: 0 });
+
+  const metrics = [
+    ['Selected year', selected ? trendNumber(selected.total) : '—', selected ? String(selected.year) : 'No years in range'],
+    ['Historical average', baseline.length ? trendNumber(average) : '—', baseline.length ? `${baseline.length} earlier years` : 'Baseline unavailable'],
+    ['Historical median', baseline.length ? trendNumber(historicalMedian) : '—', 'Earlier years only'],
+    ['Anomaly', anomaly === null ? '—' : `${anomaly >= 0 ? '+' : ''}${anomaly.toFixed(1)}σ`, 'Standard deviations from average'],
+    ['Difference from average', percentage === null ? '—' : `${percentage >= 0 ? '+' : ''}${percentage.toFixed(0)}%`, 'Selected year vs baseline'],
+    ['Peak season', peakSeason.name, `${trendNumber(peakSeason.total)} activity`],
+  ];
+  trendMetrics.replaceChildren();
+  metrics.forEach(([label, value, caption]) => {
+    const card = document.createElement('article'); card.className = 'trend-metric';
+    const name = document.createElement('span'); name.textContent = label;
+    const amount = document.createElement('strong'); amount.textContent = value;
+    const hint = document.createElement('small'); hint.textContent = caption;
+    card.append(name, amount, hint); trendMetrics.append(card);
+  });
+
+  const currentName = primaryIsRaw ? (harmonizationMode.value === 'modis' ? 'MODIS raw' : 'VIIRS raw') : 'Harmonized';
+  trendSummary.textContent = `${region.label} · ${state.start} to ${state.end} · ${modeLabel} · ${primary.length} years · selected: ${selected?.year ?? '—'}${baseline.length ? ` · baseline: ${baseline[0].year}–${baseline.at(-1).year}` : ''}`;
+  trendCanvas.setAttribute('aria-label', `${trendDisplay.value === 'annual' ? 'Annual activity' : 'Monthly seasonality'} for ${region.label}. Selected year ${selected?.year ?? 'unavailable'}, ${selected ? trendNumber(selected.total) : 'no'} annual activity. Use left and right arrow keys to select years; hover or click points for details.`);
+  trendNote.textContent = `Annual totals sum monthly provincial activity. Baseline statistics use the ${trendBaseline.value === 'all' ? 'full set of earlier years' : `previous ${trendBaseline.value} available years`} before ${selected?.year ?? 'the selected period'}. Anomaly is the z-score from the historical mean; percentage difference is relative to that mean. Monthly seasonality compares five yearly profiles. ${trendShowRaw.checked ? 'Raw/harmonized overlay compares uncalibrated MODIS counts with calibrated activity; VIIRS is unchanged by calibration.' : 'Turn on “Compare raw and harmonized” to show both series.'}`;
+
+  trendLegend.replaceChildren();
+  const visibleYears = primary.filter((entry) => entry.year <= selectedTrendYear).slice(-5);
+  const lineColors = visibleYears.map((entry, index) => index === visibleYears.length - 1 ? '#ff7438' : `rgba(255,116,56,${0.22 + 0.1 * index})`);
+  const comparisonName = primaryIsRaw ? 'Harmonized' : 'Unharmonized counts';
+  const legendItems = trendDisplay.value === 'annual'
+    ? [[currentName, '#ff7438'], ['Historical mean', '#73cfc3'], ['Historical median', '#94a9ff'], ...(trendShowRaw.checked ? [[comparisonName, primaryIsRaw ? '#73cfc3' : '#e5b96f']] : [])]
+    : [...visibleYears.map((entry, index) => [`${entry.year}${entry.year === selectedTrendYear ? ' · selected' : ''}`, lineColors[index]]), ['Monthly mean', '#73cfc3'], ['Monthly median', '#94a9ff'], ...(trendShowRaw.checked ? [[comparisonName, primaryIsRaw ? '#73cfc3' : '#e5b96f']] : [])];
+  legendItems.forEach(([label, color]) => {
+    const item = document.createElement('span'), swatch = document.createElement('i');
+    swatch.style.setProperty('--trend-color', color); item.append(swatch, document.createTextNode(label)); trendLegend.append(item);
+  });
+
   const box = trendCanvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
-  trendCanvas.width = Math.max(1, box.width * dpr); trendCanvas.height = Math.max(1, box.height * dpr);
-  const ctx = trendCanvas.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, box.width, box.height);
-  const pad = { left: 62, right: 20, top: 24, bottom: 42 }, width = box.width - pad.left - pad.right, height = box.height - pad.top - pad.bottom;
-  const max = Math.max(1, ...points.map(([, value]) => value));
-  ctx.font = '12px sans-serif'; ctx.fillStyle = '#aeb8af'; ctx.strokeStyle = '#3a443d'; ctx.lineWidth = 1;
+  if (!box.width || !box.height) return;
+  trendCanvas.width = Math.max(1, Math.round(box.width * dpr)); trendCanvas.height = Math.max(1, Math.round(box.height * dpr));
+  const ctx = trendCanvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, box.width, box.height);
+  const pad = { left: 72, right: 24, top: 28, bottom: 48 }, plotW = box.width - pad.left - pad.right, plotH = box.height - pad.top - pad.bottom;
+  trendHits = [];
+  const chartValues = [];
+  if (trendDisplay.value === 'annual') chartValues.push(...primary.map((entry) => entry.total), ...comparison.map((entry) => entry.total), average, historicalMedian);
+  else {
+    for (let month = 0; month < 12; month += 1) chartValues.push(trendMean(baseline.map((entry) => entry.months[month])), trendMedian(baseline.map((entry) => entry.months[month])));
+    visibleYears.forEach((entry) => chartValues.push(...entry.months));
+    if (trendShowRaw.checked) { const rawYear = comparison.find((entry) => entry.year === selectedTrendYear); if (rawYear) chartValues.push(...rawYear.months); }
+  }
+  const maxY = Math.max(1, ...chartValues);
+  ctx.font = '12px DM Sans, sans-serif'; ctx.fillStyle = '#aeb8af'; ctx.strokeStyle = '#344039'; ctx.lineWidth = 1;
   for (let i = 0; i <= 4; i += 1) {
-    const y = pad.top + height * i / 4;
+    const y = pad.top + plotH * i / 4;
     ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(box.width - pad.right, y); ctx.stroke();
-    ctx.textAlign = 'right'; ctx.fillText(Math.round(max * (1 - i / 4)).toLocaleString(), pad.left - 9, y + 4);
+    ctx.textAlign = 'right'; ctx.fillText(trendNumber(maxY * (1 - i / 4)), pad.left - 10, y + 4);
   }
-  if (points.length) {
-    const xAt = (index) => pad.left + (points.length === 1 ? width / 2 : width * index / (points.length - 1));
-    const yAt = (value) => pad.top + height * (1 - value / max);
-    ctx.strokeStyle = '#ff7438'; ctx.lineWidth = 3; ctx.beginPath();
-    points.forEach(([, value], index) => { if (index === 0) ctx.moveTo(xAt(index), yAt(value)); else ctx.lineTo(xAt(index), yAt(value)); });
-    ctx.stroke(); ctx.fillStyle = '#ff9b5f';
-    points.forEach(([year, value], index) => {
-      ctx.beginPath(); ctx.arc(xAt(index), yAt(value), 3, 0, Math.PI * 2); ctx.fill();
-      const labelEvery = Math.max(1, Math.ceil(points.length / 12));
-      if (index % labelEvery === 0 || index === points.length - 1) {
-        ctx.textAlign = 'center'; ctx.fillStyle = '#aeb8af'; ctx.fillText(String(year), xAt(index), box.height - 15); ctx.fillStyle = '#ff9b5f';
+  const xMonthly = (index) => pad.left + plotW * index / 11;
+  const yValue = (value) => pad.top + plotH * (1 - value / maxY);
+  const drawLine = (values, color, width, dash = []) => {
+    ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash(dash); ctx.beginPath();
+    values.forEach((value, index) => { const x = trendDisplay.value === 'annual' ? pad.left + (values.length === 1 ? plotW / 2 : plotW * index / Math.max(1, values.length - 1)) : xMonthly(index); if (!index) ctx.moveTo(x, yValue(value)); else ctx.lineTo(x, yValue(value)); });
+    ctx.stroke(); ctx.restore();
+  };
+
+  if (trendDisplay.value === 'annual') {
+    const xYear = (index) => pad.left + (primary.length === 1 ? plotW / 2 : plotW * index / Math.max(1, primary.length - 1));
+    if (baseline.length) { drawLine(Array(primary.length).fill(average), '#73cfc3', 2, [7, 5]); drawLine(Array(primary.length).fill(historicalMedian), '#94a9ff', 2, [3, 4]); }
+    drawLine(primary.map((entry) => entry.total), '#ff7438', 3);
+    primary.forEach((entry, index) => {
+      const x = xYear(index), y = yValue(entry.total);
+      ctx.fillStyle = '#ff9b5f'; ctx.beginPath(); ctx.arc(x, y, entry.year === selectedTrendYear ? 5 : 3.2, 0, Math.PI * 2); ctx.fill();
+      trendHits.push({ x, y, year: entry.year, value: entry.total, name: currentName });
+      if (trendShowRaw.checked) {
+        const other = comparison.find((value) => value.year === entry.year);
+        if (other) { const otherY = yValue(other.total); ctx.fillStyle = primaryIsRaw ? '#73cfc3' : '#e5b96f'; ctx.beginPath(); ctx.arc(x, otherY, 3, 0, Math.PI * 2); ctx.fill(); trendHits.push({ x, y:otherY, year:other.year, value:other.total, name:comparisonName }); }
       }
+      if (index % Math.max(1, Math.ceil(primary.length / 16)) === 0 || entry.year === selectedTrendYear || index === primary.length - 1) { ctx.fillStyle = '#aeb8af'; ctx.textAlign = 'center'; ctx.fillText(String(entry.year), x, box.height - 17); }
     });
+    if (trendShowRaw.checked) drawLine(comparison.map((entry) => entry.total), primaryIsRaw ? '#73cfc3' : '#e5b96f', 2, [5, 4]);
   } else {
-    ctx.textAlign = 'center'; ctx.fillStyle = '#aeb8af'; ctx.fillText('No activity records in this date range and sensor mode.', box.width / 2, box.height / 2);
+    visibleYears.forEach((entry, yearIndex) => {
+      const color = lineColors[yearIndex]; drawLine(entry.months, color, yearIndex === visibleYears.length - 1 ? 2.8 : 1.6);
+      entry.months.forEach((value, month) => { const x=xMonthly(month), y=yValue(value); ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,2.8,0,Math.PI*2);ctx.fill();trendHits.push({x,y,year:entry.year,value,name:monthNames[month]}); });
+    });
+    const monthlyMean = Array.from({ length:12 }, (_, month) => trendMean(baseline.map((entry) => entry.months[month])));
+    const monthlyMedian = Array.from({ length:12 }, (_, month) => trendMedian(baseline.map((entry) => entry.months[month])));
+    drawLine(monthlyMean, '#73cfc3', 2, [7, 5]); drawLine(monthlyMedian, '#94a9ff', 2, [3, 4]);
+    if (trendShowRaw.checked) {
+      const rawYear = comparison.find((entry) => entry.year === selectedTrendYear);
+      if (rawYear) { const color=primaryIsRaw?'#73cfc3':'#e5b96f';drawLine(rawYear.months,color,2.2,[5,4]);rawYear.months.forEach((value,month)=>{const x=xMonthly(month),y=yValue(value);ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,2.8,0,Math.PI*2);ctx.fill();trendHits.push({x,y,year:rawYear.year,value,name:`${comparisonName} ${monthNames[month]}`});}); }
+    }
+    ctx.fillStyle='#aeb8af';ctx.textAlign='center';monthNames.forEach((month,index)=>ctx.fillText(month,xMonthly(index),box.height-17));
   }
-  ctx.textAlign = 'left';
+  if (!primary.length) { ctx.textAlign='center';ctx.fillStyle='#aeb8af';ctx.fillText('No activity records in this date range and sensor mode.',box.width/2,box.height/2); }
+  ctx.textAlign='left';
 }
 
 function renderComparison() {
@@ -1136,6 +1240,36 @@ function loadLiveYear() {
   getYearRows(year).then((rows)=>{if(liveYearRequested!==year)return;liveRows=rows;renderLiveFeed();})
     .catch(()=>{if(liveYearRequested===year)liveStatus.textContent=`Could not load the ${year} hotspot archive.`;});
 }
+trendCanvas.addEventListener('pointermove', (event) => {
+  const rect = trendCanvas.getBoundingClientRect(), x = event.clientX - rect.left, y = event.clientY - rect.top;
+  let nearest = null, distance = Infinity;
+  trendHits.forEach((hit) => { const next = Math.hypot(hit.x - x, hit.y - y); if (next < distance) { nearest = hit; distance = next; } });
+  if (!nearest || distance > 18) { trendTooltip.hidden = true; trendCanvas.style.cursor = 'default'; return; }
+  trendTooltip.textContent = `${nearest.name} · ${nearest.year} · ${trendNumber(nearest.value)} activity · click to select year`;
+  trendTooltip.hidden = false; trendCanvas.style.cursor = 'pointer';
+  const wrap = trendCanvas.parentElement.getBoundingClientRect();
+  trendTooltip.style.left = `${Math.min(wrap.width - 230, Math.max(8, x + 16))}px`;
+  trendTooltip.style.top = `${Math.max(8, y - 42)}px`;
+});
+trendCanvas.addEventListener('pointerleave', () => { trendTooltip.hidden = true; trendCanvas.style.cursor = 'default'; });
+trendCanvas.addEventListener('click', (event) => {
+  const rect = trendCanvas.getBoundingClientRect(), x = event.clientX - rect.left, y = event.clientY - rect.top;
+  const nearest = trendHits.reduce((best, hit) => { const distance = Math.hypot(hit.x-x,hit.y-y); return distance < best.distance ? { hit, distance } : best; }, { hit:null, distance:Infinity });
+  if (nearest.hit && nearest.distance <= 18) { selectedTrendYear = nearest.hit.year; trendTooltip.hidden = true; renderTrend(); }
+});
+trendCanvas.addEventListener('keydown', (event) => {
+  if (!['ArrowLeft','ArrowRight'].includes(event.key)) return;
+  const years = annualSeries(state.region, harmonizationMode.value !== 'harmonized').map((entry) => entry.year);
+  if (!years.length) return;
+  event.preventDefault();
+  const current = Math.max(0, years.indexOf(selectedTrendYear));
+  selectedTrendYear = years[Math.min(years.length - 1, Math.max(0, current + (event.key === 'ArrowRight' ? 1 : -1)))];
+  trendCanvas.setAttribute('aria-label', `Interactive fire activity trend. Selected year ${selectedTrendYear}. Use arrow keys to change year.`);
+  renderTrend();
+});
+trendDisplay.addEventListener('change', renderTrend);
+trendBaseline.addEventListener('change', renderTrend);
+trendShowRaw.addEventListener('change', renderTrend);
 compareRegionA.addEventListener('change',renderComparison);compareRegionB.addEventListener('change',renderComparison);
 window.addEventListener('resize',()=>{renderComparison();renderTrend();});
 window.addEventListener('filtersChanged',()=>{if(state.view==='compare')renderComparison();if(state.view==='live')loadLiveYear();if(state.view==='trend')renderTrend();});
