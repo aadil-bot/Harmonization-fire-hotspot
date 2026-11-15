@@ -595,6 +595,18 @@ function pointInIndex(index, lon, lat) {
 
 function pointInProvince(lon, lat) { return pointInIndex(activeProvinceIndex, lon, lat); }
 
+function focusMapOnSelectedProvince() {
+  const boundary = fireBoundaryLayer?.getLayers()[0];
+  if (!fireMap || !boundary) return false;
+  fireMap.invalidateSize({ pan: false });
+  fireMap.fitBounds(boundary.getBounds(), {
+    paddingTopLeft: [24, 64],
+    paddingBottomRight: [24, 78],
+    animate: false,
+  });
+  return true;
+}
+
 // Use one Canada-wide projection for the canvas fallback so every province is
 // reachable even when Leaflet or its basemap tiles are unavailable.
 function fallbackProjection(width, height) {
@@ -682,7 +694,11 @@ function setActiveProvince(shouldZoom = true) {
       if (shouldZoom && pendingMapPlace?.regionValue === region.value) {
         fireMap.setView([pendingMapPlace.lat, pendingMapPlace.lon], pendingMapPlace.zoom);
         pendingMapPlace = null;
-      } else if (shouldZoom) fireMap.fitBounds(boundary.getBounds(), { padding: [24, 24] });
+      } else if (shouldZoom) {
+        // Wait for Leaflet to measure the visible map. This also handles a
+        // map opened from the initially hidden calendar view.
+        requestAnimationFrame(() => requestAnimationFrame(() => focusMapOnSelectedProvince()));
+      }
     }
     renderVisibleMap();
     if(state.view==='live') renderLiveFeed();
@@ -1033,8 +1049,7 @@ window.addEventListener('viewChanged', (event) => {
   requestAnimationFrame(() => {
     if (fireMap) {
       fireMap.invalidateSize();
-      const boundary = fireBoundaryLayer?.getLayers()[0];
-      if (boundary) fireMap.fitBounds(boundary.getBounds(), { padding: [24, 24] });
+      focusMapOnSelectedProvince();
     }
     renderVisibleMap();
   });
@@ -1062,6 +1077,11 @@ mapYearEnd.addEventListener('input', () => {
 mapYearStart.addEventListener('change', updateDateRangeFromSlider);
 mapYearEnd.addEventListener('change', updateDateRangeFromSlider);
 setActiveProvince(true);
+// The entry view can finish its short fade after the boundary script loads;
+// make one final focus pass once that layout animation has settled.
+window.setTimeout(() => {
+  if (state.view === 'map') focusMapOnSelectedProvince();
+}, 280);
 syncSliderFromDates();
 loadYearRange();
 
