@@ -149,6 +149,7 @@ body.map-maximized .map-panel { border-color: #48524b; }
   .brand-mark { width: 22px; height: 22px; }
   .topbar-divider, .page-label { display: none; }
   .download-button { min-height: 32px; padding: 0 9px; font-size: 9px; }
+  .download-label { display:none; }
   .quick-hop-button { min-height:32px; padding:0 7px; gap:4px; font-size:9px; }
   .icon-button { width: 32px; min-height: 32px; }
   .workspace { display: block; min-height: calc(100vh - var(--topbar-height)); transition: none; }

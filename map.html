@@ -7,14 +7,14 @@
   <meta name="description" content="MOSAIC — MODIS-VIIRS Observation Synthesis for Activity and Intensity Calendars. Explore harmonized satellite fire hotspot activity.">
   <title>MOSAIC — Fire activity map</title>
   <link rel="stylesheet" href="calendar.css?v=10">
-  <link rel="stylesheet" href="map.css?v=20">
+  <link rel="stylesheet" href="map.css?v=21">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
   <link rel="stylesheet" href="insights.css?v=6">
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous" defer></script>
   <script src="calendar-data.js?v=5" defer></script>
   <script src="data/canada/province_monthly.js?v=1" defer></script>
   <script src="data/calibration_factors.js?v=1" defer></script>
-  <script src="map.js?v=18" defer></script>
+  <script src="map.js?v=19" defer></script>
   <script src="calendar.js?v=9" defer></script>
   <script src="outlook.js?v=6" defer></script>
   <script src="insights.js?v=9" defer></script>
@@ -32,7 +32,8 @@
       </div>
       <div class="topbar-actions">
         <button class="quick-hop-button" id="calendar-map-hop" type="button" aria-label="Go to calendar view">Calendar view <span aria-hidden="true">↗</span></button>
-        <button class="download-button" id="download-csv" type="button"><span aria-hidden="true">↓</span> Download CSV</button>
+        <button class="download-button" id="download-csv" type="button" aria-label="Download CSV; CSV cannot store column widths" title="CSV is a plain-text format and cannot save column widths"><span aria-hidden="true">↓</span><span class="download-label">Download CSV</span></button>
+        <button class="download-button download-xlsx-button" id="download-xlsx" type="button" aria-label="Download Excel workbook with columns sized to fit the data" title="Excel workbook with readable, pre-sized columns"><span aria-hidden="true">▦</span><span class="download-label">Excel (.xlsx)</span></button>
         <div class="menu-wrap">
           <button class="icon-button menu-toggle" id="menu-toggle" type="button" aria-label="Open views menu" aria-controls="menu" aria-expanded="false" aria-haspopup="menu">
             <span class="hamburger" aria-hidden="true"><i></i><i></i><i></i></span>
