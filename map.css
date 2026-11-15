@@ -47,6 +47,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .menu-item { width: 100%; min-height: 38px; display: block; padding: 0 10px; border: 0; border-radius: 3px; color: var(--muted); background: transparent; text-align: left; font-size: 11px; cursor: pointer; }
 .menu-item:hover, .menu-item:focus-visible { color: var(--text); background: #252d27; }
 .menu-item.is-active { color: var(--orange-light); background: rgba(255, 116, 56, .1); }
+.quick-hop-button { min-height:34px; display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:0 12px; color:var(--text); background:#202722; border:1px solid #536057; border-radius:4px; font-size:11px; font-weight:600; white-space:nowrap; cursor:pointer; }
+.quick-hop-button span { color:var(--orange-light); font-size:15px; }
+.quick-hop-button:hover { background:#2a332d; border-color:var(--orange-light); }
 .content-view[hidden] { display: none !important; }
 .map-view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .placeholder-view { flex: 1; min-height: 420px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: clamp(28px, 7vw, 90px); border: 1px solid #29312b; border-radius: 5px; background: radial-gradient(ellipse at 75% 25%, rgba(81, 49, 30, .12), transparent 43%), repeating-linear-gradient(0deg, transparent 0 47px, rgba(131, 150, 136, .025) 47px 48px), repeating-linear-gradient(90deg, transparent 0 47px, rgba(131, 150, 136, .025) 47px 48px), #151a17; }
@@ -143,6 +146,7 @@ body.map-maximized .map-panel { border-color: #48524b; }
   .brand-mark { width: 22px; height: 22px; }
   .topbar-divider, .page-label { display: none; }
   .download-button { min-height: 32px; padding: 0 9px; font-size: 9px; }
+  .quick-hop-button { min-height:32px; padding:0 7px; gap:4px; font-size:9px; }
   .icon-button { width: 32px; min-height: 32px; }
   .workspace { display: block; min-height: calc(100vh - var(--topbar-height)); transition: none; }
   .sidebar { position: fixed; z-index: 9; top: 0; bottom: 0; left: 0; width: min(310px, calc(100vw - 48px)); padding: 24px 20px 18px; transform: translateX(-102%); transition: transform .22s ease; box-shadow: 18px 0 42px rgba(0, 0, 0, .35); }
@@ -173,6 +177,8 @@ body.map-maximized .map-panel { border-color: #48524b; }
   .topbar { padding: 0 9px; }
   .topbar-left, .topbar-actions { gap: 8px; }
   .download-button { padding: 0 7px; }
+  .quick-hop-button { padding:0 6px; font-size:8px; }
+  .quick-hop-button span { display:none; }
   .map-layer-label { font-size: 6px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }

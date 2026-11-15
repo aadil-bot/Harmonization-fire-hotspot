@@ -357,6 +357,15 @@ mobileMediaQuery.addEventListener('change', () => {
 const menuToggle = document.querySelector('#menu-toggle');
 const menu = document.querySelector('#menu');
 const menuItems = Array.from(menu.querySelectorAll('[role="menuitem"]'));
+const calendarMapHop = document.querySelector('#calendar-map-hop');
+
+function updateCalendarMapHop() {
+  const targetView = state.view === 'map' ? 'calendar' : 'map';
+  const label = targetView === 'calendar' ? 'Calendar view' : 'Map view';
+  calendarMapHop.innerHTML = `${label} <span aria-hidden="true">↗</span>`;
+  calendarMapHop.setAttribute('aria-label', `Go to ${targetView} view`);
+  calendarMapHop.title = `Go to ${targetView} view`;
+}
 
 function closeMenu(returnFocus = false) {
   menu.hidden = true;
@@ -370,6 +379,7 @@ function setActiveView(viewName, announce = true) {
   if (!view || !selectedItem) return;
 
   state.view = viewName;
+  updateCalendarMapHop();
   if (viewName !== 'map') setMapMaximized(false);
   document.querySelectorAll('.content-view').forEach((section) => {
     const isActive = section === view;
@@ -410,6 +420,10 @@ menuItems.forEach((item) => {
     setActiveView(item.dataset.view);
     closeMenu(true);
   });
+});
+
+calendarMapHop.addEventListener('click', () => {
+  setActiveView(state.view === 'map' ? 'calendar' : 'map');
 });
 
 menu.addEventListener('keydown', (event) => {
@@ -763,7 +777,7 @@ function loadYear(year) {
 
 if (window.L) {
   fireMap = L.map('fire-map', { preferCanvas: true }).setView([53.5, -113.5], 5);
-  mapRenderer = L.canvas({ padding: .5 });
+  mapRenderer = L.canvas({ padding: .5, tolerance: 10 });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap contributors' }).addTo(fireMap);
   fireBoundaryLayer = L.layerGroup().addTo(fireMap);
   fireLayer = L.layerGroup().addTo(fireMap);
