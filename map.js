@@ -1020,15 +1020,25 @@ mapSearchForm.addEventListener('submit', async (event) => {
 });
 
 window.addEventListener('filtersChanged', () => {
-  // Preserve the Canada-wide view after province selection so distant
-  // provinces remain reachable. City searches can still zoom in.
-  setActiveProvince(Boolean(pendingMapPlace));
+  // Focus the map on the selected province as soon as the boundary is ready.
+  // A searched city can still override this with its more precise location.
+  setActiveProvince(true);
   syncSliderFromDates();
   const key = `${mapYearStart.value}:${mapYearEnd.value}:${harmonizationMode.value}`;
   if (key !== requestedYearRange) loadYearRange();
   else renderVisibleMap();
 });
-window.addEventListener('viewChanged', (event) => { if ((event.detail?.view || event.detail) === 'map') { requestAnimationFrame(() => { if (fireMap) fireMap.invalidateSize(); renderVisibleMap(); }); } });
+window.addEventListener('viewChanged', (event) => {
+  if ((event.detail?.view || event.detail) !== 'map') return;
+  requestAnimationFrame(() => {
+    if (fireMap) {
+      fireMap.invalidateSize();
+      const boundary = fireBoundaryLayer?.getLayers()[0];
+      if (boundary) fireMap.fitBounds(boundary.getBounds(), { padding: [24, 24] });
+    }
+    renderVisibleMap();
+  });
+});
 harmonizationMode.addEventListener('change', () => {
   if (harmonizationMode.value === 'modis') {
     mapLegendTitle.textContent = 'MODIS HOTSPOTS · OBSERVED FIRE DAYS';
@@ -1051,7 +1061,7 @@ mapYearEnd.addEventListener('input', () => {
 });
 mapYearStart.addEventListener('change', updateDateRangeFromSlider);
 mapYearEnd.addEventListener('change', updateDateRangeFromSlider);
-setActiveProvince(false);
+setActiveProvince(true);
 syncSliderFromDates();
 loadYearRange();
 
