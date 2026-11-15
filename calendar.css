@@ -15,8 +15,8 @@
 .calendar-grid th.month-heading { height: 25px; text-align: center; }
 .calendar-grid th.year-heading { width: 46px; text-align: left; padding-left: 2px; }
 .calendar-grid tbody th { color: #d5dbd4; font: 10px var(--mono); text-align: left; padding-left: 2px; }
-.calendar-grid td { height: 25px; padding: 0; }
-.calendar-cell { position: relative; display: block; width: 100%; height: 22px; min-width: 0; padding: 0; overflow: hidden; border: 1px solid rgba(18, 20, 18, .48); border-radius: 4px; cursor: help; }
+.calendar-grid td { height: 38px; padding: 0; }
+.calendar-cell { position: relative; display: block; width: 100%; height: 30px; min-width: 0; padding: 0; overflow: hidden; border: 1px solid rgba(18, 20, 18, .48); border-radius: 4px; cursor: pointer; }
 .calendar-cell.level-1, .heat-swatch.level-1 { background-color: #f0e6cd; }
 .calendar-cell.level-2, .heat-swatch.level-2 { background-color: #f2ad6e; }
 .calendar-cell.level-3, .heat-swatch.level-3 { background-color: #e86b3d; }
@@ -28,6 +28,27 @@
 .calendar-cell.level-4 { background-image: radial-gradient(rgba(255, 214, 176, .65) .7px, transparent .9px); background-size: 5px 5px; }
 .calendar-cell:hover, .calendar-cell:focus-visible { z-index: 1; outline: 2px solid #fff1d9; outline-offset: 1px; }
 .calendar-tooltip { position: absolute; z-index: 4; left: 0; top: 0; max-width: min(250px, calc(100% - 12px)); padding: 8px 10px; color: var(--text); background: #0d110f; border: 1px solid #59635b; border-radius: 4px; box-shadow: 0 6px 18px rgba(0, 0, 0, .38); font: 10px/1.5 var(--sans); pointer-events: none; }
+.calendar-cell:focus-visible { outline-offset:3px; }
+.calendar-drill[hidden], .calendar-week-list[hidden], .calendar-day-list[hidden], #calendar-back-month[hidden] { display:none; }
+.calendar-drill { margin-top:14px; padding:18px; background:rgba(16,20,18,.48); border:1px solid #303833; border-radius:5px; }
+.calendar-drill-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.calendar-drill-heading .eyebrow { margin:0 0 5px; }
+.calendar-drill-heading h2 { margin:0; color:var(--text); font:600 21px/1.3 var(--display); }
+.calendar-drill-nav { display:flex; flex-wrap:wrap; gap:8px; }
+.calendar-drill-nav button { min-height:38px; padding:0 12px; color:var(--text); background:#202722; border:1px solid #536057; border-radius:4px; font-size:13px; cursor:pointer; }
+.calendar-drill-nav button:hover { border-color:var(--orange-light); }
+.calendar-drill-summary { margin:10px 0 15px; color:var(--muted); font-size:14px; line-height:1.55; }
+.calendar-week-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:9px; }
+.calendar-week-card { display:grid; gap:9px; min-height:92px; padding:12px; text-align:left; color:var(--text); background:#171c19; border:1px solid #38423a; border-radius:4px; cursor:pointer; }
+.calendar-week-card:hover,.calendar-week-card:focus-visible { border-color:var(--orange-light); background:#202722; }
+.calendar-week-card strong { font-size:14px; }
+.calendar-week-card span { color:var(--muted); font:12px var(--mono); }
+.calendar-week-track { height:8px; overflow:hidden; background:#303833; border-radius:5px; }
+.calendar-week-track i { display:block; height:100%; background:var(--orange); border-radius:5px; }
+.calendar-day-list { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:8px; }
+.calendar-day-card { min-width:0; display:grid; gap:6px; padding:10px 6px; text-align:center; background:#171c19; border:1px solid #38423a; border-radius:4px; }
+.calendar-day-card time { color:var(--muted); font:11px var(--mono); }
+.calendar-day-card strong { color:var(--orange-light); font:600 13px var(--mono); }
 .calendar-legend { max-width: 280px; margin: 18px auto 0; }
 .legend-steps, .legend-captions, .legend-names { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
 .heat-swatch { height: 17px; display: grid; place-items: center; border: 1px solid rgba(18, 20, 18, .48); border-radius: 3px; color: #241b15; font: 500 8px var(--mono); }
@@ -45,9 +66,14 @@
   .calendar-grid-wrap { max-height: 58vh; }
   .calendar-grid { min-width: 490px; border-spacing: 3px 4px; padding: 5px; }
   .calendar-grid th.year-heading { width: 39px; }
-  .calendar-grid td { height: 22px; }
-  .calendar-cell { height: 20px; border-radius: 3px; }
+  .calendar-grid td { height: 38px; }
+  .calendar-cell { height: 36px; border-radius: 3px; }
   .calendar-legend { max-width: 250px; margin-top: 15px; }
+  .calendar-drill { padding:13px 10px; }
+  .calendar-drill-heading { align-items:flex-start; flex-direction:column; }
+  .calendar-drill-heading h2 { font-size:19px; }
+  .calendar-week-list { grid-template-columns:1fr; }
+  .calendar-day-list { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 
 .calendar-grid tr.sensor-start-row td { height: 2px; padding: 0; border: 0; border-top: 2px solid #55aaff; text-align: right; line-height: 0; }

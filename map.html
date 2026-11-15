@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101412">
   <meta name="description" content="MOSAIC — MODIS-VIIRS Observation Synthesis for Activity and Intensity Calendars. Explore harmonized satellite fire hotspot activity.">
   <title>MOSAIC — Fire activity map</title>
-  <link rel="stylesheet" href="calendar.css">
+  <link rel="stylesheet" href="calendar.css?v=2">
   <link rel="stylesheet" href="map.css?v=11">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
   <link rel="stylesheet" href="insights.css?v=4">
@@ -16,7 +16,7 @@
   <script src="data/calibration_factors.js?v=1" defer></script>
   <script src="data/map-years/2023.js?v=5" defer></script>
   <script src="map.js?v=11" defer></script>
-  <script src="calendar.js?v=6" defer></script>
+  <script src="calendar.js?v=8" defer></script>
   <script src="insights.js?v=5" defer></script>
 </head>
 <body>
@@ -126,6 +126,15 @@
               </table>
               <div id="calendar-tooltip" class="calendar-tooltip" role="tooltip" hidden></div>
             </div>
+            <section id="calendar-drill" class="calendar-drill" aria-live="polite" hidden>
+              <div class="calendar-drill-heading">
+                <div><p class="eyebrow">ACTIVITY DETAILS</p><h2 id="calendar-drill-title"></h2></div>
+                <div class="calendar-drill-nav"><button id="calendar-back-year" type="button">← All years</button><button id="calendar-back-month" type="button" hidden>← Month</button></div>
+              </div>
+              <p id="calendar-drill-summary" class="calendar-drill-summary"></p>
+              <div id="calendar-week-list" class="calendar-week-list"></div>
+              <div id="calendar-day-list" class="calendar-day-list" hidden></div>
+            </section>
             <div id="calendar-legend" class="calendar-legend" hidden aria-label="Fire activity scale">
               <div class="legend-steps" aria-hidden="true"><span class="heat-swatch level-1">1</span><span class="heat-swatch level-2">2</span><span class="heat-swatch level-3">3</span><span class="heat-swatch level-4">4</span></div>
               <div class="legend-captions"><span>Low activity</span><span>High activity</span></div>

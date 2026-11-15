@@ -26,11 +26,21 @@
   const tooltip = document.querySelector('#calendar-tooltip');
   const description = document.querySelector('#calendar-description');
   const legend = document.querySelector('#calendar-legend');
+  const drill = document.querySelector('#calendar-drill');
+  const drillTitle = document.querySelector('#calendar-drill-title');
+  const drillSummary = document.querySelector('#calendar-drill-summary');
+  const weekList = document.querySelector('#calendar-week-list');
+  const dayList = document.querySelector('#calendar-day-list');
+  const backToYear = document.querySelector('#calendar-back-year');
+  const backToMonth = document.querySelector('#calendar-back-month');
   if (!section || !status || !table) return;
 
   let latestFilters = readCurrentFilters();
   let renderNumber = 0;
   let activeCell = null;
+  let drillState = { level: 'year', year: null, month: null, weekIndex: null };
+  let provinceDailyPromise = null;
+  let currentMonthWeeks = [];
 
   function readCurrentFilters() {
     return {
@@ -66,10 +76,11 @@
     }
 
     records.forEach((record) => {
-      if (!record || typeof record.date !== 'string' || record.date < start || record.date > end) return;
+      if (!record || typeof record.date !== 'string') return;
       const count = Number(record.count);
       if (!Number.isFinite(count)) return;
       const monthKey = record.date.slice(0, 7);
+      if (monthKey < start.slice(0, 7) || monthKey > end.slice(0, 7)) return;
       if (totals.has(monthKey)) totals.set(monthKey, totals.get(monthKey) + count);
     });
     return { firstYear, lastYear, totals };
@@ -97,6 +108,128 @@
 
   function monthName(year, monthIndex) {
     return `${MONTHS[monthIndex].name} ${year}`;
+  }
+
+  function isoDate(date) { return date.toISOString().slice(0, 10); }
+
+  function dateLabel(date) {
+    return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(date);
+  }
+
+  function activityForDate(date) {
+    const values = window.MOSAIC_PROVINCE_DAILY?.[latestFilters.region]?.[date];
+    if (!values) return 0;
+    const mode = document.querySelector('#harmonization-mode')?.value || 'harmonized';
+    return Number(values[mode === 'modis' ? 1 : mode === 'viirs' ? 2 : 0]) || 0;
+  }
+
+  function loadProvinceDaily() {
+    if (window.MOSAIC_PROVINCE_DAILY) return Promise.resolve();
+    if (provinceDailyPromise) return provinceDailyPromise;
+    provinceDailyPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'data/canada/province_daily.js?v=1';
+      script.onload = () => window.MOSAIC_PROVINCE_DAILY ? resolve() : reject(new Error('Daily province data is empty.'));
+      script.onerror = () => reject(new Error('Could not load daily province data.'));
+      document.head.append(script);
+    }).catch((error) => { provinceDailyPromise = null; throw error; });
+    return provinceDailyPromise;
+  }
+
+  function showYearOverview() {
+    drillState = { level: 'year', year: null, month: null, weekIndex: null };
+    currentMonthWeeks = [];
+    drill.hidden = true;
+    gridWrap.hidden = false;
+    legend.hidden = false;
+    hideTooltip();
+  }
+
+  function renderMonthDrill(year, monthIndex) {
+    if (!window.MOSAIC_PROVINCE_DAILY || !window.MOSAIC_PROVINCE_DAILY_META) return;
+    drillState = { level: 'month', year, month: monthIndex, weekIndex: null };
+    gridWrap.hidden = true;
+    legend.hidden = true;
+    drill.hidden = false;
+    backToMonth.hidden = true;
+    weekList.hidden = false;
+    dayList.hidden = true;
+    drillTitle.textContent = monthName(year, monthIndex);
+    weekList.replaceChildren();
+
+    const archive = window.MOSAIC_PROVINCE_DAILY_META;
+    const firstOfMonth = new Date(Date.UTC(year, monthIndex, 1));
+    const lastOfMonth = new Date(Date.UTC(year, monthIndex + 1, 0));
+    const firstAllowed = [isoDate(firstOfMonth), latestFilters.start, archive.start].sort().slice(-1)[0];
+    const lastAllowed = [isoDate(lastOfMonth), latestFilters.end, archive.end].sort()[0];
+    if (firstAllowed > lastAllowed) {
+      drillSummary.textContent = `No daily observations are available for ${monthName(year, monthIndex)} within the selected dates. The daily provincial archive covers ${archive.start} to ${archive.end}.`;
+      return;
+    }
+
+    const weeks = new Map();
+    for (let cursor = new Date(`${firstAllowed}T00:00:00Z`); isoDate(cursor) <= lastAllowed; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+      const date = isoDate(cursor);
+      const monday = new Date(cursor);
+      monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+      const weekKey = isoDate(monday);
+      if (!weeks.has(weekKey)) weeks.set(weekKey, { start: date, end: date, total: 0, days: [] });
+      const week = weeks.get(weekKey);
+      week.end = date;
+      const value = activityForDate(date);
+      week.total += value;
+      week.days.push({ date, value });
+    }
+    currentMonthWeeks = [...weeks.values()];
+    const total = currentMonthWeeks.reduce((sum, week) => sum + week.total, 0);
+    const modeLabel = document.querySelector('#harmonization-mode')?.selectedOptions[0]?.textContent || 'Harmonized Activity';
+    drillSummary.textContent = `${latestFilters.region.replaceAll('-', ' ')} · ${firstAllowed} to ${lastAllowed} · ${modeLabel} · ${Math.round(total).toLocaleString()} total activity. Weeks run Monday–Sunday and are clipped to this month and your selected dates.`;
+
+    const max = Math.max(1, ...currentMonthWeeks.map((week) => week.total));
+    currentMonthWeeks.forEach((week, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'calendar-week-card';
+      button.setAttribute('aria-label', `Open week ${index + 1}, ${dateLabel(new Date(`${week.start}T00:00:00Z`))} to ${dateLabel(new Date(`${week.end}T00:00:00Z`))}, ${Math.round(week.total).toLocaleString()} activity`);
+      const title = document.createElement('strong');
+      title.textContent = `Week ${index + 1} · ${dateLabel(new Date(`${week.start}T00:00:00Z`))}–${dateLabel(new Date(`${week.end}T00:00:00Z`))}`;
+      const amount = document.createElement('span');
+      amount.textContent = `${week.total.toLocaleString(undefined, { maximumFractionDigits: 1 })} activity`;
+      const track = document.createElement('span');
+      track.className = 'calendar-week-track';
+      track.setAttribute('aria-hidden', 'true');
+      const fill = document.createElement('i');
+      fill.style.width = `${week.total / max * 100}%`;
+      track.append(fill);
+      button.append(title, amount, track);
+      button.addEventListener('click', () => renderWeekDrill(index));
+      weekList.append(button);
+    });
+  }
+
+  function renderWeekDrill(weekIndex) {
+    const week = currentMonthWeeks[weekIndex];
+    if (!week) return;
+    drillState = { ...drillState, level: 'week', weekIndex };
+    weekList.hidden = true;
+    dayList.hidden = false;
+    dayList.replaceChildren();
+    backToMonth.hidden = false;
+    drillTitle.textContent = `${monthName(drillState.year, drillState.month)} · Week ${weekIndex + 1}`;
+    drillSummary.textContent = `${week.start} to ${week.end} · ${week.total.toLocaleString(undefined, { maximumFractionDigits: 1 })} activity. Daily values use the sensor mode selected in the sidebar.`;
+    week.days.forEach(({ date, value }) => {
+      const card = document.createElement('article');
+      card.className = 'calendar-day-card';
+      const day = document.createElement('time');
+      day.dateTime = date;
+      day.textContent = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
+      const amount = document.createElement('strong');
+      amount.textContent = value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+      const unit = document.createElement('span');
+      unit.textContent = 'fire-cell activity';
+      card.append(day, amount, unit);
+      dayList.append(card);
+    });
   }
 
   function createMonthHeaders() {
@@ -142,11 +275,12 @@
         const button = document.createElement('button');
         button.type = 'button';
         button.className = `calendar-cell ${LEVELS[level - 1].className}`;
+        button.title = `Open ${monthName(year, monthIndex)} weekly details`;
         button.dataset.month = String(monthIndex);
         button.dataset.year = String(year);
         button.dataset.count = String(count);
         button.dataset.level = String(level);
-        button.setAttribute('aria-label', `${monthName(year, monthIndex)}: ${count.toLocaleString()} detections, ${LEVELS[level - 1].label.toLowerCase()}.`);
+        button.setAttribute('aria-label', `${monthName(year, monthIndex)}: ${count.toLocaleString()} activity, ${LEVELS[level - 1].label.toLowerCase()}. Activate to view weekly activity.`);
         button.setAttribute('aria-describedby', 'calendar-tooltip');
         cell.append(button);
         row.append(cell);
@@ -179,7 +313,7 @@
     const year = Number(cell.dataset.year);
     const count = Number(cell.dataset.count);
     const level = Number(cell.dataset.level);
-    tooltip.textContent = `${monthName(year, monthIndex)} · ${count.toLocaleString()} detections · ${LEVELS[level - 1].label}`;
+    tooltip.textContent = `${monthName(year, monthIndex)} · ${count.toLocaleString()} activity · ${LEVELS[level - 1].label} · Click to view weeks`;
     tooltip.hidden = false;
 
     const wrapRect = gridWrap.getBoundingClientRect();
@@ -206,6 +340,29 @@
   }
 
   function connectTooltips() {
+    table.addEventListener('click', (event) => {
+      const cell = event.target.closest('.calendar-cell');
+      if (!cell) return;
+      const year = Number(cell.dataset.year);
+      const month = Number(cell.dataset.month);
+      drillState = { level: 'month', year, month, weekIndex: null };
+      gridWrap.hidden = true;
+      legend.hidden = true;
+      drill.hidden = false;
+      weekList.hidden = false;
+      dayList.hidden = true;
+      drillTitle.textContent = monthName(year, month);
+      drillSummary.textContent = 'Loading daily activity for this province…';
+      weekList.replaceChildren();
+      loadProvinceDaily().then(() => {
+        if (section.hidden || drillState.year !== year || drillState.month !== month) return;
+        renderMonthDrill(year, month);
+      }).catch(() => {
+        if (drillState.year === year && drillState.month === month) {
+          drillSummary.textContent = 'Daily province data could not be loaded. The month totals remain available in the year overview.';
+        }
+      });
+    });
     table.addEventListener('pointerover', (event) => {
       const marker = event.target.closest('.sensor-start-marker');
       if (marker) {
@@ -249,13 +406,14 @@
     if (mode === 'viirs' && start < '2012-01-01') start = '2012-01-01';
     regionLabel.textContent = region.replaceAll('-', ' ').toUpperCase();
     if (description) description.textContent = mode === 'harmonized'
-      ? 'Harmonized monthly activity for this province or territory. MODIS values before 2012 are calibrated to the VIIRS scale.'
+      ? 'Harmonized monthly activity for this province or territory. Click a month block to open its weeks. MODIS values before 2012 are calibrated to the VIIRS scale.'
       : mode === 'modis'
-        ? 'MODIS-only monthly activity before 2012, shown on its uncalibrated sensor scale.'
-        : 'VIIRS-only monthly activity from 2012 onward.';
+        ? 'MODIS-only monthly activity before 2012, shown on its uncalibrated sensor scale. Click a month block to open its weeks.'
+        : 'VIIRS-only monthly activity from 2012 onward. Click a month block to open its weeks.';
     status.hidden = false;
     status.textContent = `Loading ${region.replaceAll('-', ' ')} ${mode === 'harmonized' ? 'harmonized' : mode.toUpperCase()} calendar…`;    gridWrap.hidden = true;
     legend.hidden = true;
+    drill.hidden = true;
     hideTooltip();
 
     if (!start || !end || start > end) {
@@ -269,9 +427,26 @@
       const monthData = getMonthTotals(Array.isArray(records) ? records : [], start, end);
       renderTable(monthData);
       status.hidden = true;
-      gridWrap.hidden = false;
-      legend.hidden = false;
-      gridWrap.scrollTop = gridWrap.scrollHeight;
+      if (drillState.level === 'year') {
+        showYearOverview();
+        gridWrap.scrollTop = gridWrap.scrollHeight;
+      } else {
+        const previousDrillLevel = drillState.level;
+        const previousWeekIndex = drillState.weekIndex;
+        const restoreDrill = () => {
+          if (thisRender !== renderNumber || section.hidden) return;
+          renderMonthDrill(drillState.year, drillState.month);
+          if (previousDrillLevel === 'week') renderWeekDrill(previousWeekIndex);
+        };
+        if (window.MOSAIC_PROVINCE_DAILY) restoreDrill();
+        else {
+          drill.hidden = false;
+          drillSummary.textContent = 'Loading daily province activity…';
+          loadProvinceDaily().then(restoreDrill).catch(() => {
+            if (thisRender === renderNumber) drillSummary.textContent = 'Daily province data could not be loaded. The month totals remain available in the year overview.';
+          });
+        }
+      }
     } catch (error) {
       if (thisRender !== renderNumber || section.hidden) return;
       status.textContent = 'Fire activity could not be loaded. Please try again.';
@@ -281,16 +456,22 @@
   }
 
   connectTooltips();
+  backToYear.addEventListener('click', showYearOverview);
+  backToMonth.addEventListener('click', () => renderMonthDrill(drillState.year, drillState.month));
   document.querySelector('#harmonization-mode')?.addEventListener('change', () => { if (!section.hidden) renderCalendar(); });
 
   window.addEventListener('filtersChanged', (event) => {
     const details = event.detail || {};
-    latestFilters = {
+    const nextFilters = {
       region: details.region || latestFilters.region,
       start: details.start || latestFilters.start,
       end: details.end || latestFilters.end,
       role: details.role || latestFilters.role,
     };
+    if (nextFilters.region !== latestFilters.region || nextFilters.start !== latestFilters.start || nextFilters.end !== latestFilters.end) {
+      drillState = { level: 'year', year: null, month: null, weekIndex: null };
+    }
+    latestFilters = nextFilters;
     if (!section.hidden) renderCalendar();
   });
 
