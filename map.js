@@ -429,6 +429,8 @@ function setMapMaximized(maximized) {
 mapExpandButton.addEventListener('click', () => setMapMaximized(!state.mapMaximized));
 
 const mapYear = document.querySelector('#map-year');
+const harmonizationMode = document.querySelector('#harmonization-mode');
+const mapLegendTitle = document.querySelector('#map-legend-title');
 const mapYearValue = document.querySelector('#map-year-value');
 const mapDataStatus = document.querySelector('#map-data-status');
 let mapRows = [];
@@ -561,11 +563,14 @@ function setActiveProvince(shouldZoom = true) {
   });
 }
 
+function mapActivityValue(row) { return harmonizationMode.value === 'harmonized' ? Number(row.harmonized_cells) : Number(row.fire_days); }
+
 function getVisibleRows() {
   if (!activeProvinceIndex) return [];
   return mapRows.filter((row) => {
     const withinDateRange = (!row.last_fire || row.last_fire >= state.start) && (!row.first_fire || row.first_fire <= state.end);
-    return withinDateRange && pointInProvince(row.lon, row.lat);
+    const matchesMode = harmonizationMode.value === 'harmonized' || (harmonizationMode.value === 'modis' ? row.source.toUpperCase().includes('MODIS') : row.source.toUpperCase().includes('VIIRS'));
+    return withinDateRange && matchesMode && pointInProvince(row.lon, row.lat);
   });
 }
 
@@ -578,12 +583,13 @@ function drawFireMap(rows) {
   if (!fireMap || !fireLayer) return;
   fireLayer.clearLayers();
   rows.forEach((row) => {
-    const colour = fireColour(row.harmonized_cells);
-    const radius = Math.min(6, 2.4 + Math.log1p(Number(row.harmonized_cells) || 0) * .55);
+    const activity = mapActivityValue(row);
+    const colour = fireColour(activity);
+    const radius = Math.min(6, 2.4 + Math.log1p(activity || 0) * .55);
     L.circleMarker([row.lat, row.lon], {
       renderer: mapRenderer, radius, color: '#371e17', weight: .35,
       fillColor: colour.color, fillOpacity: colour.opacity,
-    }).bindPopup(`<strong>${row.year} · ${row.source}</strong><br>Harmonized fire cells: ${row.harmonized_cells}<br>Observed fire days: ${row.fire_days}<br>Active: ${row.first_fire} → ${row.last_fire}<br>Total fire radiative power: ${Number(row.frp_total_mw).toLocaleString()} MW<br>Peak day: ${row.peak_day}`).addTo(fireLayer);
+    }).bindPopup(`<strong>${row.year} · ${row.source}</strong><br>${harmonizationMode.value === 'harmonized' ? 'Harmonized fire cells' : 'Sensor fire days'}: ${activity}<br>${harmonizationMode.value === 'modis' ? 'MODIS before 2012 is calibrated for harmonized comparisons.' : ''}<br>Active: ${row.first_fire} → ${row.last_fire}<br>Total fire radiative power: ${Number(row.frp_total_mw).toLocaleString()} MW<br>Peak day: ${row.peak_day}`).addTo(fireLayer);
   });
 }
 
@@ -636,8 +642,9 @@ function drawFallback(rows) {
 
   rows.forEach((row) => {
     const [x, y] = project([row.lon, row.lat]);
-    const level = fireColour(row.harmonized_cells);
-    const radius = Math.min(5.2, 1.8 + Math.log1p(Number(row.harmonized_cells) || 0) * .45);
+    const activity = mapActivityValue(row);
+    const level = fireColour(activity);
+    const radius = Math.min(5.2, 1.8 + Math.log1p(activity || 0) * .45);
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.fillStyle = level.color;
@@ -662,7 +669,7 @@ function renderVisibleMap(shouldZoom = false) {
   }
   const region = CONFIG.regions.find((item) => item.value === state.region)?.label || state.region;
   mapYearValue.value = String(year);
-  if (activeProvinceIndex) mapDataStatus.textContent = `${rows.length.toLocaleString()} fire cells in ${region} · ${year} · ${rows[0]?.source || 'No matching records'}`;
+  if (activeProvinceIndex) mapDataStatus.textContent = `${rows.length.toLocaleString()} ${harmonizationMode.options[harmonizationMode.selectedIndex].text.toLowerCase()} in ${region} · ${year}${rows.length ? ` · ${rows[0].source}` : ' · no records for this sensor/year'}`;
 }
 
 function setRowsForYear(rows, year) {
@@ -707,6 +714,21 @@ if (window.L) {
 
 window.addEventListener('filtersChanged', () => setActiveProvince(true));
 window.addEventListener('viewChanged', (event) => { if ((event.detail?.view || event.detail) === 'map') { requestAnimationFrame(() => { if (fireMap) fireMap.invalidateSize(); renderVisibleMap(); }); } });
+harmonizationMode.addEventListener('change', () => {
+  if (harmonizationMode.value === 'modis') {
+    mapYear.min = '2002'; mapYear.max = '2011';
+    if (+mapYear.value > 2011) mapYear.value = '2011';
+    mapLegendTitle.textContent = 'MODIS HOTSPOTS · OBSERVED FIRE DAYS';
+  } else if (harmonizationMode.value === 'viirs') {
+    mapYear.min = '2012'; mapYear.max = '2025';
+    if (+mapYear.value < 2012) mapYear.value = '2012';
+    mapLegendTitle.textContent = 'VIIRS FIRE DAYS';
+  } else {
+    mapYear.min = '2002'; mapYear.max = '2025';
+    mapLegendTitle.textContent = 'HARMONIZED FIRE DAYS';
+  }
+  loadYear(Number(mapYear.value));
+});
 mapYear.addEventListener('input', () => loadYear(Number(mapYear.value)));
 setActiveProvince(true);
 loadYear(Number(mapYear.value));

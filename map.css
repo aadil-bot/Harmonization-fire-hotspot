@@ -204,3 +204,4 @@ body.map-maximized .map-panel { border-color: #48524b; }
   .map-data-controls input { flex: 1 1 120px; }
   .map-data-controls span { flex: 1 0 100%; max-width: none; text-align: left; }
 }
+

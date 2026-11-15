@@ -11,12 +11,12 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
   <link rel="stylesheet" href="insights.css">
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous" defer></script>
-  <script src="calendar-data.js?v=4" defer></script>
+  <script src="calendar-data.js?v=5" defer></script>
   <script src="data/canada/province_monthly.js?v=1" defer></script>
-  <script src="data/map-years/2023.js?v=4" defer></script>
-  <script src="map.js?v=4" defer></script>
-  <script src="calendar.js?v=4" defer></script>
-  <script src="insights.js?v=4" defer></script>
+  <script src="data/map-years/2023.js?v=5" defer></script>
+  <script src="map.js?v=5" defer></script>
+  <script src="calendar.js?v=5" defer></script>
+  <script src="insights.js?v=5" defer></script>
 </head>
 <body>
   <div class="app-shell">
@@ -71,7 +71,13 @@
           </div>
 
           <div class="filter-group">
-            <label class="group-label" for="role"><span class="field-index">03</span> Role viewpoint</label>
+            <label class="group-label" for="harmonization-mode"><span class="field-index">03</span> Activity data</label>
+            <div class="select-wrap"><select id="harmonization-mode" aria-label="Choose harmonized or sensor-specific activity"><option value="harmonized" selected>Harmonized Activity</option><option value="modis">MODIS Hotspots</option><option value="viirs">VIIRS Hotspots</option></select><span class="chevron" aria-hidden="true">⌄</span></div>
+            <p class="field-hint">Choose harmonized activity or view one sensor at a time.</p>
+          </div>
+
+          <div class="filter-group">
+            <label class="group-label" for="role"><span class="field-index">04</span> Role viewpoint</label>
             <div class="select-wrap"><select id="role" name="role" required></select><span class="chevron" aria-hidden="true">⌄</span></div>
             <p class="field-hint" id="role-description"></p>
           </div>
@@ -86,9 +92,9 @@
       <main class="main-content">
         <section class="content-view map-view" id="view-map" aria-label="Map view">
         <section class="map-panel" aria-label="Fire hotspot map">
-          <div class="map-topline"><div><span class="live-dot" aria-hidden="true"></span><span id="map-region-label">ALBERTA</span></div><div class="map-topline-actions"><span class="map-layer-label">ACTIVE FIRE HOTSPOTS <span>·</span> MODIS + VIIRS</span><button id="map-expand" class="map-expand-button" type="button" aria-label="Maximize map" aria-pressed="false" title="Maximize map"><span aria-hidden="true">⛶</span></button></div></div>
+          <div class="map-topline"><div><span class="live-dot" aria-hidden="true"></span><span id="map-region-label">ALBERTA</span></div><div class="map-topline-actions"><span class="map-layer-label" id="map-layer-label">ACTIVE FIRE HOTSPOTS <span>·</span> MODIS + VIIRS</span><button id="map-expand" class="map-expand-button" type="button" aria-label="Maximize map" aria-pressed="false" title="Maximize map"><span aria-hidden="true">⛶</span></button></div></div>
           <div class="map-data-controls"><label for="map-year">Map year</label><input id="map-year" type="range" min="2002" max="2025" value="2023"><output id="map-year-value" for="map-year">2023</output><span id="map-data-status" role="status">Loading Canadian fire cells…</span></div><div id="fire-map" role="region" aria-label="Interactive map of Canadian harmonized fire activity"></div>
-          <div class="map-legend" aria-label="Map legend"><span class="legend-title">HARMONIZED FIRE DAYS</span><span><i class="legend-dot low"></i>LOW</span><span><i class="legend-dot medium"></i>MEDIUM</span><span><i class="legend-dot high"></i>HIGH</span></div>
+          <div class="map-legend" aria-label="Map legend"><span class="legend-title" id="map-legend-title">HARMONIZED FIRE DAYS</span><span><i class="legend-dot low"></i>LOW</span><span><i class="legend-dot medium"></i>MEDIUM</span><span><i class="legend-dot high"></i>HIGH</span></div>
         </section>
 
         <section class="insights-panel" aria-labelledby="insights-title">
