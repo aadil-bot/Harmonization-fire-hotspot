@@ -2,6 +2,10 @@
 // without changing the form's validation and navigation logic.
 const CONFIG = {
   minDate: '2000-11-01',
+  // A one-month landing window keeps the first map fast while leaving a
+  // December 2025 hotspot sample visible in the default Alberta view.
+  defaultStartDate: '2025-12-01',
+  defaultEndDate: '2025-12-31',
   regions: [
     { value: 'alberta', label: 'Alberta' },
     { value: 'british-columbia', label: 'British Columbia' },
@@ -58,10 +62,9 @@ endInput.max = today;
 populateOptions(regionSelect, CONFIG.regions, (region) => region.label);
 populateOptions(roleSelect, CONFIG.roles, (role) => `${role.label} — ${role.description}`);
 
-// Start with the full supported record so the map and calendar include the
-// historical data from its first available date. Visitors can narrow it later.
-startInput.value = CONFIG.minDate;
-endInput.value = today;
+// Begin with a lightweight recent period; visitors can expand it as needed.
+startInput.value = CONFIG.defaultStartDate;
+endInput.value = CONFIG.defaultEndDate;
 
 function showError(message, focusTarget) {
   errorMessage.textContent = message;
@@ -129,3 +132,18 @@ form.addEventListener('submit', (event) => {
 // Clear stale errors as soon as the user edits a field.
 form.addEventListener('input', clearError);
 form.addEventListener('change', clearError);
+
+// Keep the decorative preview idle until it is on screen and the tab is active.
+const previewWindow = document.querySelector('.preview-window');
+if (previewWindow && 'IntersectionObserver' in window) {
+  let previewIsVisible = false;
+  const updatePreviewMotion = () => {
+    previewWindow.classList.toggle('is-paused', !previewIsVisible || document.hidden);
+  };
+  const previewObserver = new IntersectionObserver((entries) => {
+    previewIsVisible = entries.some((entry) => entry.isIntersecting);
+    updatePreviewMotion();
+  }, { threshold: 0.08 });
+  previewObserver.observe(previewWindow);
+  document.addEventListener('visibilitychange', updatePreviewMotion);
+}

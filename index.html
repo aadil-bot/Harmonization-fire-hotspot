@@ -6,10 +6,21 @@
   <meta name="theme-color" content="#101412">
   <meta name="description" content="MOSAIC — MODIS-VIIRS Observation Synthesis for Activity and Intensity Calendars. Explore harmonized satellite fire hotspot data.">
   <title>MOSAIC — Wildfire intelligence</title>
-  <link rel="stylesheet" href="styles.css?v=4">
-  <script src="script.js?v=2" defer></script>
+  <link rel="stylesheet" href="styles.css?v=8">
+  <script src="script.js?v=4" defer></script>
 </head>
 <body>
+  <div class="intro-splash" aria-hidden="true">
+    <div class="intro-splash-grid"></div>
+    <div class="intro-splash-center">
+      <div class="intro-splash-mark"><span></span></div>
+      <p class="intro-splash-kicker">FIRE ACTIVITY INTELLIGENCE</p>
+      <p class="intro-splash-title">MOSAIC</p>
+      <div class="intro-splash-progress"><span></span></div>
+      <p class="intro-splash-status">CONNECTING SATELLITE RECORDS <i></i> MODIS + VIIRS</p>
+    </div>
+    <span class="intro-splash-coordinate">CANADA <b>·</b> 2002—2025</span>
+  </div>
   <main class="page-shell">
     <header class="site-header">
       <a class="brand" href="index.html" aria-label="MOSAIC home">
@@ -85,6 +96,59 @@
       </section>
     </section>
 
+    <section class="demo-preview" aria-labelledby="demo-preview-title">
+      <div class="demo-preview-heading">
+        <div>
+          <p class="eyebrow"><span class="eyebrow-line"></span> INSIDE MOSAIC</p>
+          <h2 id="demo-preview-title">From the fire map to an action plan.</h2>
+          <p>Explore satellite activity, compare historical patterns, and bring the results into your working context.</p>
+        </div>
+        <span class="preview-loop-label"><i aria-hidden="true"></i> THREE VIEWS · LOOPING PREVIEW</span>
+      </div>
+      <div class="preview-window" role="img" aria-label="Animated illustrative preview of the MOSAIC map, historical activity calendar, and role-based insights">
+        <div class="preview-window-bar" aria-hidden="true">
+          <span class="preview-brand"><i></i> MOSAIC</span>
+          <span class="preview-window-context">CANADIAN FIRE ACTIVITY</span>
+          <span class="preview-window-status"><i></i> DEMO DATA</span>
+        </div>
+        <div class="preview-stage" aria-hidden="true">
+          <article class="preview-scene preview-map-scene">
+            <div class="preview-map-heading"><span>HISTORICAL HOTSPOTS</span><b>ALBERTA · 2025</b></div>
+            <div class="preview-map-art">
+              <div class="preview-map-grid"></div><div class="preview-region-shape"></div>
+              <i class="preview-hotspot p1"></i><i class="preview-hotspot p2"></i><i class="preview-hotspot p3"></i><i class="preview-hotspot p4"></i>
+              <i class="preview-hotspot p5"></i><i class="preview-hotspot p6"></i><i class="preview-hotspot p7"></i><i class="preview-hotspot p8"></i>
+              <i class="preview-hotspot p9"></i><i class="preview-hotspot p10"></i><i class="preview-hotspot p11"></i><i class="preview-hotspot p12"></i>
+              <span class="preview-map-label label-north">NORTH</span><span class="preview-map-label label-south">SOUTH</span>
+              <div class="preview-map-scale"><span>MAP YEAR</span><b>2025</b><i></i></div>
+            </div>
+            <div class="preview-map-legend"><span><i></i> LOWER ACTIVITY</span><span><i></i> HIGHER ACTIVITY</span><span class="preview-map-dataset">MODIS + VIIRS</span></div>
+          </article>
+          <article class="preview-scene preview-calendar-scene">
+            <div class="preview-scene-title"><div><span>SEASONAL PATTERNS</span><h3>Historical fire activity calendar</h3></div><b>ALBERTA</b></div>
+            <div class="preview-calendar">
+              <div class="preview-months"><span></span><span>J</span><span>F</span><span>M</span><span>A</span><span>M</span><span>J</span><span>J</span><span>A</span><span>S</span><span>O</span><span>N</span><span>D</span></div>
+              <div class="preview-calendar-row"><b>2023</b><i></i><i class="heat-1"></i><i></i><i class="heat-1"></i><i class="heat-2"></i><i class="heat-2"></i><i class="heat-3"></i><i class="heat-3"></i><i class="heat-2"></i><i class="heat-1"></i><i></i><i></i></div>
+              <div class="preview-calendar-row"><b>2024</b><i></i><i></i><i class="heat-1"></i><i></i><i class="heat-2"></i><i class="heat-3"></i><i class="heat-3"></i><i class="heat-2"></i><i class="heat-3"></i><i class="heat-2"></i><i class="heat-1"></i><i></i></div>
+              <div class="preview-calendar-row"><b>2025</b><i></i><i class="heat-1"></i><i></i><i class="heat-1"></i><i class="heat-2"></i><i class="heat-2"></i><i class="heat-3"></i><i class="heat-3"></i><i class="heat-2"></i><i class="heat-1"></i><i></i><i class="heat-1"></i></div>
+            </div>
+            <div class="preview-calendar-legend"><span>LOW ACTIVITY</span><i class="heat-1"></i><i class="heat-2"></i><i class="heat-3"></i><span>HIGH ACTIVITY</span></div>
+            <p class="preview-calendar-caption">Twenty years of satellite observations, organized by season.</p>
+          </article>
+          <article class="preview-scene preview-insights-scene">
+            <div class="preview-insights-main">
+              <span class="preview-role-label">EMERGENCY RESPONSE</span>
+              <h3>Preparedness at a glance.</h3>
+              <p>Historical activity and current detections, framed for your role.</p>
+              <div class="preview-stat-row"><div><span>7-DAY OUTLOOK</span><b>Elevated</b></div><div><span>HOTSPOT ANOMALY</span><b>+24%</b></div><div><span>PEAK CONDITIONS</span><b>DAY 4</b></div></div>
+            </div>
+            <aside class="preview-actions-card"><span>RECOMMENDED NEXT</span><b><i>01</i> Review response readiness</b><b><i>02</i> Prioritize watch areas</b><b><i>03</i> Coordinate local updates</b></aside>
+          </article>
+        </div>
+        <div class="preview-progress" aria-hidden="true"><i></i><i></i><i></i></div>
+      </div>
+      <p class="preview-caption">Illustrative interface preview. Activity values and action prompts shown here are examples.</p>
+    </section>
     <footer class="site-footer"><span>MOSAIC <span class="footer-separator">/</span> WILDFIRE INTELLIGENCE</span><span>STARTING IN CANADA <span class="footer-dot">●</span></span></footer>
   </main>
 </body>

@@ -2,6 +2,8 @@
 // when additional countries or provinces are ready to be explored.
 const CONFIG = {
   minDate: '2000-11-01',
+  defaultStartDate: '2025-12-01',
+  defaultEndDate: '2025-12-31',
   regions: [
     { value: 'alberta', label: 'Alberta', provinceCode: '48' },
     { value: 'british-columbia', label: 'British Columbia', provinceCode: '59' },
@@ -143,15 +145,15 @@ function setupFromUrl() {
   // Only the map and calendar are welcome-page entry points; fall back safely
   // so initialization uses the same view-switching path as the menu.
   state.view = ['map', 'calendar'].includes(requestedView) ? requestedView : 'map';
-  const requestedStart = params.get('start') || '';
-  const requestedEnd = params.get('end') || '';
+  const requestedStart = params.get('start') || CONFIG.defaultStartDate;
+  const requestedEnd = params.get('end') || CONFIG.defaultEndDate;
   const validRegion = CONFIG.regions.some((item) => item.value === params.get('region'));
   const validRole = CONFIG.roles.some((item) => item.value === params.get('role'));
 
   state.region = validRegion ? params.get('region') : CONFIG.regions[0].value;
   state.role = validRole ? params.get('role') : CONFIG.roles[CONFIG.roles.length - 1].value;
-  state.start = requestedStart >= CONFIG.minDate && requestedStart <= today ? requestedStart : CONFIG.minDate;
-  state.end = requestedEnd >= CONFIG.minDate && requestedEnd <= today ? requestedEnd : today;
+  state.start = requestedStart >= CONFIG.minDate && requestedStart <= today ? requestedStart : CONFIG.defaultStartDate;
+  state.end = requestedEnd >= CONFIG.minDate && requestedEnd <= today ? requestedEnd : CONFIG.defaultEndDate;
   // Keep an invalid reversed range visible as a clear form error for correction.
 
   controls.start.min = CONFIG.minDate;
@@ -485,7 +487,6 @@ let initialYearRows = window.MOSAIC_YEAR_ROWS || null;
 let fireMap = null;
 let fireLayer = null;
 let fireBoundaryLayer = null;
-let provinceClickableLayer = null;
 let mapRenderer = null;
 // Province shapes load on demand from Statistics Canada's 2021 generalized
 // province/territory boundaries; PRUID links each shape to the sidebar choice.
@@ -896,30 +897,8 @@ if (window.L) {
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap contributors' }).addTo(fireMap);
   fireBoundaryLayer = L.layerGroup().addTo(fireMap);
   fireLayer = L.layerGroup().addTo(fireMap);
-  // A low-z-index province layer makes every province selectable, including
-  // remote northern islands that are difficult to target on the map canvas.
-  fireMap.createPane('provinceHitPane');
-  fireMap.getPane('provinceHitPane').style.zIndex = 350;
-  provinceClickableLayer = L.layerGroup().addTo(fireMap);
-  Promise.all(CONFIG.regions.map(async (region) => {
-    try {
-      const entry = await loadProvinceIndex(region);
-      const boundary = L.geoJSON(entry.feature, {
-        pane: 'provinceHitPane',
-        interactive: true,
-        style: { color: '#8c9a8e', weight: 1, opacity: .68, fillColor: '#425346', fillOpacity: .015 },
-        onEachFeature: (_feature, layer) => layer.on('click', (event) => {
-          if (event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
-          if (controls.region.value !== region.value) {
-            controls.region.value = region.value;
-            applyControlChange(controls.region);
-          }
-          mapSearchStatus.textContent = `${region.label} selected from the map.`;
-        }),
-      });
-      boundary.addTo(provinceClickableLayer);
-    } catch { /* Keep the rest of the province boundaries available. */ }
-  }));
+  // Load only the selected province initially; other boundary files are lazy
+  // loaded when the user clicks their area, keeping first load lightweight.
   fireMap.on('click', (event) => {
     selectProvinceAt(event.latlng.lat, event.latlng.lng);
   });
