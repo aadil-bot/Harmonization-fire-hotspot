@@ -36,6 +36,11 @@ button, input, select { font: inherit; }
 .brand-mark span { width: 9px; height: 9px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 15px rgba(255, 116, 56, .8); }
 .header-note, .eyebrow, .data-strip small, .step-badge, .field-number, .secure-note, .site-footer { font-family: var(--mono); }
 .header-note { color: var(--muted); font-size: 10px; letter-spacing: .08em; display: inline-flex; align-items: center; gap: 9px; }
+.header-links { display:flex; align-items:center; gap:24px; }
+.header-method-link,.footer-method-link { color:var(--orange-light); text-decoration:none; }
+.header-method-link { font:10px var(--mono); letter-spacing:.04em; }
+.header-method-link:hover,.footer-method-link:hover { color:var(--text); }
+.footer-method-link { margin-right:8px; }
 .status-dot, .footer-dot { color: var(--orange); }
 .status-dot { display: inline-block; width: 6px; height: 6px; background: var(--orange); border-radius: 50%; box-shadow: 0 0 10px rgba(255, 116, 56, .55); }
 .hero { display: grid; grid-template-columns: 1fr 432px; gap: clamp(50px, 9vw, 128px); align-items: center; padding: 76px 0 84px; }

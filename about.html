@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101412">
+  <meta name="description" content="How MOSAIC harmonizes NASA MODIS and VIIRS active-fire observations into a comparable Canadian fire-activity record.">
+  <title>About the method — MOSAIC</title>
+  <link rel="stylesheet" href="map.css?v=23">
+  <link rel="stylesheet" href="about.css?v=4">
+  <script src="data/calibration_factors.js?v=1" defer></script>
+  <script src="about.js?v=1" defer></script>
+</head>
+<body class="about-page">
+  <div class="app-shell about-app-shell">
+    <header class="topbar">
+      <div class="topbar-left"><a class="brand" href="index.html" aria-label="MOSAIC home"><span class="brand-mark" aria-hidden="true"><i></i></span><span>MOSAIC</span></a><span class="topbar-divider" aria-hidden="true"></span><span class="page-label">ABOUT THE METHOD</span></div>
+      <div class="topbar-actions about-top-actions"><a class="quick-hop-button" href="index.html">Home</a><a class="quick-hop-button" href="map.html">Explore data <span aria-hidden="true">↗</span></a></div>
+    </header>
+
+    <main class="about-main">
+    <section class="about-hero" aria-labelledby="about-title">
+      <p class="eyebrow"><span class="eyebrow-line"></span> THE METHOD · CANADA · 2002–2025</p>
+      <h1 id="about-title">Two sensors.<br><span>One comparable record.</span></h1>
+      <p class="about-lede">MOSAIC combines fire observations from MODIS and VIIRS to make long-term activity easier to compare. It corrects for a sensor change that can look like a sudden increase in fire even when the difference comes from how the satellites observe it.</p>
+      <div class="about-stat-row" aria-label="Method summary">
+        <div><strong>0.1°</strong><span>shared daily grid</span></div>
+        <div><strong>12</strong><span>monthly calibration factors</span></div>
+        <div><strong>2002–2025</strong><span>Canadian archive coverage</span></div>
+      </div>
+    </section>
+
+    <section class="about-section" aria-labelledby="sensor-title">
+      <div class="about-section-heading"><p class="eyebrow">01 · THE SENSOR CHANGE</p><h2 id="sensor-title">Why harmonize the observations?</h2><p>MODIS and VIIRS do not see fire at the same detail. When VIIRS enters the record, raw hotspot counts rise partly because the instrument can see smaller fires—not only because fire activity changed.</p></div>
+      <div class="sensor-compare-grid">
+        <article class="sensor-card sensor-modis"><span class="sensor-kicker">MODIS · AQUA</span><strong>1 km</strong><p>Long-running observations. A larger pixel can miss smaller or shorter-lived fires.</p><div class="pixel-demo" aria-label="One large MODIS pixel compared with smaller VIIRS pixels"><span class="modis-pixel"></span><span class="pixel-equals">≈</span><span class="viirs-pixel-grid" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div><small>One 1 km MODIS pixel covers about seven 375 m VIIRS pixel areas.</small></article>
+        <article class="sensor-card sensor-viirs"><span class="sensor-kicker">VIIRS · SUOMI-NPP</span><strong>375 m</strong><p>Finer detail picks up many smaller hotspots that are below MODIS’s detection scale.</p><div class="sensor-callout"><b>2012 sensor transition</b><span>A jump in raw counts at the transition can be a measurement change, not a sudden change in fire activity.</span></div></article>
+      </div>
+      <figure class="sensor-timeline-card">
+        <figcaption><strong>Which observations build the record?</strong><span>VIIRS is the common comparison scale from 2012 onward; the overlap years let us estimate the earlier MODIS adjustment.</span></figcaption>
+        <div class="timeline-axis"><span>2002</span><span>2012</span><span>2025</span></div>
+        <div class="timeline-row"><b>Harmonized record</b><div class="timeline-track"><span class="timeline-modis">MODIS × monthly factor</span><span class="timeline-viirs">VIIRS baseline</span><i aria-hidden="true"></i></div></div>
+        <div class="timeline-row"><b>Calibration sample</b><div class="timeline-track"><span class="timeline-empty">No VIIRS overlap</span><span class="timeline-overlap">MODIS and VIIRS overlap · estimate monthly factors</span></div></div>
+        <p class="timeline-note">During overlap, the output uses VIIRS for the shared period so the same activity is not counted twice.</p>
+      </figure>
+    </section>
+
+    <section class="about-section" aria-labelledby="steps-title">
+      <div class="about-section-heading"><p class="eyebrow">02 · HOW THE DATA IS HARMONIZED</p><h2 id="steps-title">From detections to a shared scale</h2><p>Each step puts the sensors on a comparable footing while keeping the source and limits of the observations visible.</p></div>
+      <ol class="method-steps">
+        <li><span class="step-number">01</span><div><h3>Clean and filter</h3><p>Keep presumed vegetation fires and nominal- or high-confidence observations. MODIS confidence percentages are mapped to VIIRS-style classes first: below 30% is low, 30–79% nominal, and 80% or higher high. Low-confidence detections are excluded.</p></div></li>
+        <li><span class="step-number">02</span><div><h3>Use the same grid and time unit</h3><p>Snap locations to a shared 0.1° grid—about 11 km north–south and 5–7 km east–west. Count a <b>fire cell-day</b> when a cell has at least one fire observation on a date. This reduces the effect of different native pixel sizes.</p></div></li>
+        <li><span class="step-number">03</span><div><h3>Estimate a factor for each month</h3><p>Across years when both sensors operated, compare their daily fire-cell totals separately for each calendar month. The VIIRS-to-MODIS ratio becomes that month’s calibration factor.</p></div></li>
+        <li><span class="step-number">04</span><div><h3>Build one historical series</h3><p>Before 2012, multiply each MODIS fire-cell-day by its month’s factor. From 2012 onward, use VIIRS on its own as the target scale, avoiding duplicate counts from the overlap.</p></div></li>
+        <li><span class="step-number">05</span><div><h3>Summarize and compare</h3><p>Sum harmonized activity into daily series, calendars, and historical trends. For the weekly anomaly series, compare each week with that same week in other years after a log transform; median and median absolute deviation reduce the influence of extreme years.</p></div></li>
+      </ol>
+    </section>
+
+    <section class="about-section calibration-section" aria-labelledby="calibration-title">
+      <div class="about-section-heading"><p class="eyebrow">03 · THE CALIBRATION DATA</p><h2 id="calibration-title">The adjustment changes with the season</h2><p>One fixed multiplier would miss the seasonal difference between what the sensors detect. Each bar below is the monthly <code>k_shrunk</code> factor used for MODIS observations before the VIIRS era.</p></div>
+      <div class="calibration-panel">
+        <div class="calibration-chart-heading"><div><strong>Monthly MODIS → VIIRS factors</strong><span>Derived from the sensors’ 2012–2025 overlap</span></div><div class="calibration-chart-meta"><span class="overall-ratio-badge"><i aria-hidden="true"></i>Overall ratio ≈ 2.78</span><span class="factor-scale-label">MULTIPLIER · k_shrunk</span></div></div>
+        <div id="calibration-chart" class="calibration-chart" role="img" aria-label="Chart of monthly MODIS to VIIRS calibration factors"></div>
+        <div class="calibration-detail" id="calibration-detail" aria-live="polite"><strong>Select a month</strong><span>The monthly factor shows how MODIS fire-cell activity is weighted onto the VIIRS comparison scale.</span></div>
+        <p class="calibration-example"><b>Worked example:</b> the July factor is about 2.42. Ten MODIS fire-cell-days in July become about 24.2 VIIRS-scale activity units (10 × 2.42). This adjusts the total; it does not recreate small fires MODIS never detected.</p>
+      </div>
+      <p class="calibration-validation"><b>How the method is checked:</b> the processing notebook also describes a hold-out check: fit factors on 2012–2018, apply them to MODIS in 2019 onward, then compare with VIIRS observations. The factor chart shows the calibration inputs, not a claim that every individual fire is detected by both sensors.</p>
+      <p class="calibration-validation"><b>How the monthly factors are stabilized:</b> each month’s raw VIIRS-to-MODIS ratio is blended with the overall ratio. The monthly weight is <code>MODIS cell-days ÷ (MODIS cell-days + 200)</code>, so months with fewer observations are pulled more toward the overall factor. The notebook’s hold-out test reports annual percentage error and weekly correlation; the published factors alone do not include those validation scores.</p>
+    </section>
+
+    <section class="about-section about-limits" aria-labelledby="limits-title">
+      <div class="about-section-heading"><p class="eyebrow">04 · INTERPRETING THE RESULT</p><h2 id="limits-title">What harmonization can—and cannot—tell you</h2></div>
+      <div class="limits-grid">
+        <article><h3>Comparable totals</h3><p>Use harmonized cell activity to compare dates and years across the sensor transition. The app’s MODIS and VIIRS modes are available when you need to inspect sensor-specific observations.</p></article>
+        <article><h3>Older maps are still sparser</h3><p>A multiplier can adjust totals, but it cannot add locations for small fires MODIS did not see. Pre-2012 map patterns are calibrated estimates and have less spatial detail.</p></article>
+        <article><h3>Not burned area</h3><p>A fire cell-day means at least one detection somewhere in a roughly 0.1° grid cell on that day. It is not the area burned and does not confirm a fire perimeter.</p></article>
+        <article><h3>Other caveats</h3><p>FRP is not calibrated between sensors; raw detection counts are not comparable; 2002 is partial because the archive begins July 4; a few persistent winter hotspots may be industrial heat sources. The source includes MODIS Aqua only, not Terra. VIIRS low-confidence detections were absent from the supplied source data.</p></article>
+      </div>
+    </section>
+
+    <section class="about-source" aria-labelledby="source-title">
+      <p class="eyebrow">DATA AND REPRODUCIBILITY</p><h2 id="source-title">Where the record comes from</h2>
+      <p>Satellite active-fire observations are from NASA FIRMS: MODIS Collection 6.1 on Aqua and VIIRS 375 m on Suomi-NPP. Processing includes confidence filtering, common-grid aggregation, monthly overlap calibration, and historical calendar/anomaly summaries.</p>
+      <div class="source-links"><a href="https://earthdata.nasa.gov/firms" target="_blank" rel="noreferrer">NASA FIRMS ↗</a><a href="data/MODIS_VIIRS_Harmonization.ipynb" download>Processing notebook ↓</a><a href="data/calibration_factors.csv" download>Calibration factors CSV ↓</a><a href="data/outputs/season_summary_canada.csv" download>Canadian season summary CSV ↓</a></div>
+      <p class="source-credit">We acknowledge the use of data and/or imagery from NASA’s Fire Information for Resource Management System (FIRMS), part of NASA’s Earth Science Data and Information System (ESDIS).</p>
+    </section>
+
+    <footer class="about-footer"><span>MOSAIC <span>/</span> MODIS–VIIRS HARMONIZATION</span><span><a href="index.html">HOME</a><span>/</span><a href="map.html">EXPLORE THE DATA ↗</a></span></footer>
+    </main>
+  </div>
+</body>
+</html>
