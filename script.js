@@ -17,11 +17,11 @@ const CONFIG = {
     { value: 'saskatchewan', label: 'Saskatchewan' },
     { value: 'yukon', label: 'Yukon' },  ],
   roles: [
-    { value: 'general-view', label: 'General View', description: 'Interactive hotspot map, current versus historical fire activity, 7-day weather outlook, and regional hotspot counts.' },
-    { value: 'emergency-response', label: 'Emergency Response', description: 'Fire-weather conditions, recent hotspot activity and anomalies, preparedness indicators, nearby incidents, and resource-readiness reviews.' },
-    { value: 'scientist', label: 'Scientists', description: 'Before-and-after harmonization charts, historical anomaly analysis, sensor calibration, and model validation.' },
-    { value: 'land-manager', label: 'Land Managers', description: 'Burning frequency, seasonal hotspot calendar, vegetation and land-cover overlays, recurring activity, and planning recommendations.' },
-    { value: 'firefighter', label: 'Firefighters', description: 'Latest satellite detections, coordinates and timestamps, detection confidence and FRP, weather overlays, and incident verification.' },
+    { value: 'general-view', label: 'General View', description: 'Overall hotspot map, historical burning calendar, fire activity statistics, historical trends, and seasonal patterns.' },
+    { value: 'emergency-response', label: 'Emergency Response', description: 'Recent archived hotspots, regional historical anomalies, preparedness indicators, suggested actions, and historical seasonal outlooks. Live weather forecasts are not connected.' },
+    { value: 'scientist', label: 'Scientists', description: 'Raw MODIS and VIIRS observations, harmonized comparisons, sensor calibration, historical trends, and research data exports.' },
+    { value: 'land-manager', label: 'Land Managers', description: 'Seasonal burning patterns, recurring hotspots, regional fire history, management context, and historical seasonal outlooks.' },
+    { value: 'firefighter', label: 'Firefighters', description: 'Archived hotspot locations, dates, and FRP. Detection confidence and live environmental conditions are not provided in the current archive.' },
   ],
 };
 

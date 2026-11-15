@@ -19,6 +19,9 @@
 .hotspot-actions-heading { margin-top:17px; }
 .hotspot-dialog-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; list-style:none; margin:0; padding:0; }
 .hotspot-dialog-action { display:flex; flex-direction:column; align-items:flex-start; gap:11px; min-width:0; padding:12px; background:#171e19; border:1px solid #39433c; border-radius:5px; }
+button.hotspot-dialog-action { width:100%; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+button.hotspot-dialog-action:hover { border-color:var(--orange-light); background:#202722; }
+.hotspot-dialog button:focus-visible { outline:2px solid #ffd2ae; outline-offset:2px; }
 .hotspot-dialog-action-copy { display:grid; gap:5px; }
 .hotspot-dialog-action-copy strong { color:#f5f2eb; font-size:13px; line-height:1.35; }
 .hotspot-dialog-action-copy > span { color:var(--muted); font-size:12px; line-height:1.5; }
@@ -64,6 +67,9 @@
 .actions-heading::before { content: ''; width: 3px; height: 12px; background: var(--orange); border-radius: 2px; }
 .action-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; list-style: none; margin: 0; padding: 0; }
 .action-card { min-width: 0; display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: start; gap: 9px; padding: 11px; background: rgba(23, 28, 25, .72); border: 1px solid #303833; border-radius: 4px; }
+button.action-card { width: 100%; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: border-color .15s ease, background .15s ease; }
+button.action-card:hover { border-color: var(--orange-light); background: rgba(37, 43, 38, .95); }
+button.action-card:focus-visible { outline: 2px solid #ffd2ae; outline-offset: 2px; }
 .action-icon { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: var(--orange-light); background: rgba(255, 116, 56, .1); font-size: 12px; }
 .action-copy { min-width: 0; }
 .action-title { display: block; margin: 1px 0 5px; color: var(--text); font-size: 15px; font-weight: 700; line-height: 1.4; }

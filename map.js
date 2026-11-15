@@ -18,11 +18,11 @@ const CONFIG = {
     { value: 'yukon', label: 'Yukon', provinceCode: '60' },
   ],
   roles: [
-    { value: 'general-view', label: 'General View', description: 'Interactive hotspot map, current versus historical fire activity, 7-day weather outlook, and regional hotspot counts.', insights: ['Interactive hotspot map', 'Current versus historical fire activity', '7-day weather outlook', 'Regional hotspot counts'] },
-    { value: 'emergency-response', label: 'Emergency Response', description: 'Fire-weather conditions, recent anomalies, preparedness priorities, nearby incidents, and resource readiness.', insights: ['Regions with elevated fire-weather conditions', 'Recent hotspot activity and anomalies', '1–7 day fire-weather outlook', 'Regional preparedness priority indicators', 'Nearby reported fire incidents, if available', 'Suggested resource-readiness reviews'] },
-    { value: 'scientist', label: 'Scientists', description: 'Harmonization charts, historical anomalies, sensor calibration, and model validation.', insights: ['Before-and-after harmonization charts', 'Historical anomaly analysis', 'Sensor calibration and model validation'] },
-    { value: 'land-manager', label: 'Land Managers', description: 'Burning frequency, seasonal activity, land-cover overlays, and planning recommendations.', insights: ['Historical burning frequency by region', 'Seasonal hotspot activity calendar', 'Vegetation and land-cover overlays', 'Areas with recurring burning activity', 'Land management planning recommendations'] },
-    { value: 'firefighter', label: 'Firefighters', description: 'Current detections, confidence, fire radiative power, weather, and incident verification.', insights: ['Latest satellite hotspot detections', 'Hotspot coordinates and timestamps', 'Detection confidence and fire radiative power', 'Wind and weather overlays', 'Incident verification information'] },
+    { value: 'general-view', label: 'General View', description: 'Overall hotspot map, historical burning calendar, fire activity statistics, regional trends, and seasonal patterns.', insights: ['Overall hotspot map', 'Historical burning calendar', 'Fire activity statistics', 'Historical trends', 'Seasonal patterns'] },
+    { value: 'emergency-response', label: 'Emergency Response', description: 'Recent archived hotspots, historical regional anomalies, preparedness indicators, suggested actions, and a historical seasonal outlook. Live weather forecasts are not connected.', insights: ['Recent hotspot activity (archive through 2025)', 'Regional anomalies against historical baselines', 'Preparedness indicators', 'Seasonal outlook from historical analogues; no live weather forecast feed', 'Suggested action items'] },
+    { value: 'scientist', label: 'Scientists', description: 'Inspect sensor-specific MODIS and VIIRS activity, harmonized comparisons, calibration, historical trends, and research data exports.', insights: ['Raw MODIS and VIIRS observations', 'Harmonized dataset comparisons', 'Sensor calibration information', 'Historical trend analysis', 'Research data export'] },
+    { value: 'land-manager', label: 'Land Managers', description: 'Explore seasonal burning patterns, recurring hotspots, provincial fire history, management context, and historical seasonal outlooks.', insights: ['Seasonal burning patterns', 'Recurring hotspot activity', 'Regional fire history', 'Land management insights', 'Seasonal outlooks from historical patterns'] },
+    { value: 'firefighter', label: 'Firefighters', description: 'Review archived hotspot locations, dates, and FRP. Detection confidence and live environmental conditions are not provided in the current archive.', insights: ['Recent archived hotspot detections (through 2025)', 'Detection coordinates and observation dates', 'Detection confidence (not supplied in current archive)', 'Fire Radiative Power (FRP), where recorded', 'Environmental conditions (weather feed not connected)', 'Suggested action items'] },
   ],
 };
 
@@ -49,6 +49,7 @@ const CANADIAN_PLACES = [
 
 // This object is the live page state shared with map and calendar modules.
 const state = { region: 'alberta', start: '', end: '', role: 'general-view', view: 'map', mapMaximized: false, mobileSidebarOpen: false, sidebarWidth: null };
+window.MOSAIC_VIEW_CONTEXT = () => ({ ...state, mode: document.querySelector('#harmonization-mode')?.value || 'harmonized' });
 
 const controls = {
   start: document.querySelector('#start'),
@@ -402,6 +403,7 @@ function setActiveView(viewName, announce = true) {
   if (viewName === 'live') requestAnimationFrame(() => loadLiveYear());
   if (viewName === 'trend') requestAnimationFrame(() => renderTrend());
 }
+window.setMosaicView = (viewName) => setActiveView(viewName);
 
 function openMenu() {
   menu.hidden = false;

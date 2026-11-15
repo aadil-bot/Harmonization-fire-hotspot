@@ -1,89 +1,64 @@
-// Editable demo content for every sidebar role. Scores are illustrative and
-// are not operational forecasts or verified hotspot measurements.
+// Role-specific summaries and next steps. Activity statistics below are
+// calculated from the selected province, date range, and sensor mode.
 const ROLE_CONTENT = {
   'emergency-response': {
     name: 'Emergency Response',
-    features: ['Regions with elevated fire-weather conditions', 'Recent hotspot activity and anomalies', '1–7 day fire-weather outlook', 'Regional preparedness priority indicators', 'Nearby reported fire incidents, if available', 'Suggested resource-readiness reviews'],
+    features: ['Recent hotspot activity in the archive (through 2025)', 'Regional anomalies against historical baselines', 'Historical preparedness indicators', 'Seasonal outlook from historical analogues; no live weather forecast feed', 'Suggested action items'],
     title: 'Emergency Preparedness',
-    description: 'Support readiness planning using historical activity, recent detections, and forecast conditions.',
-    stats: [
-      { label: '7-day preparedness outlook', value: 'Elevated', caption: 'Illustrative conditions for the coming week' },
-      { label: 'Regional hotspot anomaly', value: '+42%', caption: 'Compared with a typical period' },
-      { label: 'Peak forecast conditions', value: 'Day 4', caption: 'Illustrative peak in this outlook' },
-    ],
-    outlook: [38, 51, 66, 82, 74, 58, 43],
+    description: 'Use archived activity and historical anomalies to inform readiness. Check current weather and incident sources for operational decisions.',
+    guidance: 'Open the seasonal outlook below the calendar for historical analogues. This site has no live fire-weather forecast or incident feed.',
     actions: [
-      { icon: '⚑', title: 'Review response readiness', description: 'Check team availability and incident coordination plans.', timing: 'Next 24h' },
-      { icon: '⌖', title: 'Prioritize watch areas', description: 'Review repeated or expanding detections with local teams.', timing: 'Today' },
-      { icon: '↗', title: 'Coordinate situation updates', description: 'Share relevant observations with response partners.', timing: 'Prepare' },
+      { icon: '⌖', title: 'Review archived hotspots', description: 'Open the detection list for the selected province and date range.', timing: 'Open detections', view: 'live' },
+      { icon: '◷', title: 'Check seasonal baselines', description: 'Compare future dates with historical seasonal activity; confirm current conditions separately.', timing: 'Open calendar', view: 'calendar' },
+      { icon: '⚑', title: 'Review historical anomalies', description: 'Inspect yearly activity against the selected historical baseline.', timing: 'Open trends', view: 'trend' },
     ],
   },
   scientist: {
     name: 'Scientists',
-    features: ['Before-and-after harmonization charts', 'Historical anomaly analysis', 'Sensor calibration and model validation'],
+    features: ['Raw MODIS and VIIRS observations through sensor-specific modes', 'Raw versus harmonized comparisons', 'Monthly sensor calibration factors', 'Historical trend and anomaly analysis', 'Research data export (CSV)'],
     title: 'Research context',
-    description: 'Explore seasonal patterns and long-term change across the harmonized satellite fire record.',
-    stats: [
-      { label: '7-day activity signal', value: 'Variable', caption: 'Illustrative outlook score summary' },
-      { label: 'Regional hotspot anomaly', value: '+12%', caption: 'Compared with a typical period' },
-      { label: 'Peak forecast conditions', value: 'Day 3', caption: 'Illustrative peak in this outlook' },
-    ],
-    outlook: [24, 46, 61, 55, 39, 28, 33],
+    description: 'Inspect sensor-specific observations, calibration, harmonized comparisons, and historical variation.',
+    guidance: 'Use the Activity data selector to view MODIS or VIIRS, then use Regional trends to compare raw and harmonized activity. CSV export is available for mapped records.',
     actions: [
-      { icon: '⌕', title: 'Compare seasonal windows', description: 'Review matched periods across multiple years.', timing: 'Explore' },
-      { icon: '▤', title: 'Check sensor context', description: 'Consider coverage and confidence when interpreting detections.', timing: 'Review' },
-      { icon: '↗', title: 'Document assumptions', description: 'Record date bounds and data choices for reproducibility.', timing: 'Ongoing' },
+      { icon: '⌕', title: 'Compare raw and harmonized series', description: 'Overlay uncalibrated sensor counts with harmonized activity.', timing: 'Open trends', view: 'trend' },
+      { icon: '▤', title: 'Compare provinces', description: 'Review monthly activity for two provinces over the selected period.', timing: 'Compare regions', view: 'compare' },
+      { icon: '↧', title: 'Export mapped records', description: 'Download the currently visible hotspot records as CSV.', timing: 'Download CSV', action: 'download' },
     ],
   },
   'land-manager': {
     name: 'Land Managers',
-    features: ['Historical burning frequency by region', 'Seasonal hotspot activity calendar', 'Vegetation and land-cover overlays', 'Areas with recurring burning activity', 'Land management planning recommendations'],
+    features: ['Seasonal burning patterns', 'Recurring hotspot activity', 'Regional fire history', 'Land management insights using local context', 'Seasonal outlooks based on historical patterns'],
     title: 'Land and fire planning',
-    description: 'Use historical fire activity and current signals to inform land stewardship and seasonal planning.',
-    stats: [
-      { label: '7-day preparedness outlook', value: 'Moderate', caption: 'Illustrative conditions for the coming week' },
-      { label: 'Regional hotspot anomaly', value: '+26%', caption: 'Compared with a typical period' },
-      { label: 'Peak forecast conditions', value: 'Day 6', caption: 'Illustrative peak in this outlook' },
-    ],
-    outlook: [27, 34, 42, 48, 59, 72, 63],
+    description: 'Use recurring seasonal patterns and regional fire history as planning context alongside local land information.',
+    guidance: 'The seasonal outlook below the calendar summarizes historical analogues. Add local land-cover, fuel, and management data before applying it to a specific area.',
     actions: [
-      { icon: '⌖', title: 'Review managed areas', description: 'Compare detections with local land and forest boundaries.', timing: 'Today' },
-      { icon: '◷', title: 'Check recurring periods', description: 'Identify seasons with repeatedly elevated activity.', timing: 'Plan' },
-      { icon: '↗', title: 'Coordinate local context', description: 'Discuss observations with community and field partners.', timing: 'Prepare' },
+      { icon: '◷', title: 'Review seasonal patterns', description: 'Open the calendar to compare activity by month and year.', timing: 'Open calendar', view: 'calendar' },
+      { icon: '⌖', title: 'Find recurring activity', description: 'Use the trend chart to inspect high-activity seasons and years.', timing: 'Open trends', view: 'trend' },
+      { icon: '↗', title: 'Compare regional history', description: 'Compare two provinces, then add local management context.', timing: 'Compare regions', view: 'compare' },
     ],
   },
   firefighter: {
     name: 'Firefighters',
-    features: ['Latest satellite hotspot detections', 'Hotspot coordinates and timestamps', 'Detection confidence and fire radiative power', 'Wind and weather overlays', 'Incident verification information'],
+    features: ['Archived hotspot detections (through 2025)', 'Detection coordinates and observation dates', 'Detection confidence (not supplied in the current archive)', 'Fire Radiative Power (FRP), where recorded', 'Environmental conditions (live weather feed not connected)', 'Suggested action items'],
     title: 'Operational awareness',
-    description: 'Review recent satellite detections alongside local reports to support situational awareness.',
-    stats: [
-      { label: '7-day preparedness outlook', value: 'Elevated', caption: 'Illustrative conditions for the coming week' },
-      { label: 'Regional hotspot anomaly', value: '+31%', caption: 'Compared with a typical period' },
-      { label: 'Peak forecast conditions', value: 'Day 2', caption: 'Illustrative peak in this outlook' },
-    ],
-    outlook: [71, 78, 64, 53, 47, 39, 33],
+    description: 'Inspect archived hotspot locations, dates, and FRP. Satellite detections are not confirmed incidents; confidence and live weather are not present in this archive.',
+    guidance: 'Use the detection list and map for archived coordinates and FRP where recorded. Verify current incidents, confidence, and environmental conditions with operational sources.',
     actions: [
-      { icon: '⌖', title: 'Check recent detections', description: 'Review timing and location with trusted ground reports.', timing: 'Now' },
-      { icon: '⚑', title: 'Review local readiness', description: 'Follow established procedures for staffing and equipment.', timing: 'Next 24h' },
-      { icon: '↗', title: 'Share verified updates', description: 'Keep operational partners informed of confirmed conditions.', timing: 'Ongoing' },
+      { icon: '⌖', title: 'Inspect archived detections', description: 'Open hotspot records with coordinates, observation dates, and FRP when present.', timing: 'Open detections', view: 'live' },
+      { icon: '▤', title: 'Open the hotspot map', description: 'Locate mapped cells and inspect their available details.', timing: 'Open map', view: 'map' },
+      { icon: '⚑', title: 'Verify through dispatch', description: 'The archive has no confidence or live weather feed; confirm conditions with trusted operational sources.', timing: 'Verify locally' },
     ],
   },
   'general-view': {
     name: 'General View',
-    features: ['Interactive hotspot map', 'Current versus historical fire activity', '7-day weather outlook', 'Regional hotspot counts'],
+    features: ['Overall Canadian hotspot map', 'Historical burning calendar', 'Fire activity statistics', 'Historical trends', 'Seasonal patterns'],
     title: 'Fire activity overview',
-    description: 'Explore the broad picture of historical fire activity and an illustrative seven-day outlook.',
-    stats: [
-      { label: '7-day outlook', value: 'Moderate', caption: 'Illustrative conditions for the coming week' },
-      { label: 'Regional hotspot anomaly', value: '+21%', caption: 'Compared with a typical period' },
-      { label: 'Peak forecast conditions', value: 'Day 4', caption: 'Illustrative peak in this outlook' },
-    ],
-    outlook: [29, 41, 53, 67, 61, 48, 35],
+    description: 'Explore the Canadian hotspot map, historical activity calendar, regional trends, and seasonal patterns.',
+    guidance: 'Use the calendar and trend views to compare the selected province with its own historical record. Hotspots are satellite observations, not confirmed fire perimeters.',
     actions: [
-      { icon: '⌕', title: 'Explore the selected period', description: 'Review where and when satellite hotspots were detected.', timing: 'Explore' },
-      { icon: '◷', title: 'Compare with past seasons', description: 'Look for recurring patterns across the timeline.', timing: 'Review' },
-      { icon: 'ℹ', title: 'Interpret detections carefully', description: 'Hotspots are satellite observations, not confirmed fire perimeters.', timing: 'Note' },
+      { icon: '⌖', title: 'Explore the hotspot map', description: 'Review mapped activity for the selected province and year.', timing: 'Open map', view: 'map' },
+      { icon: '◷', title: 'Browse the historical calendar', description: 'Compare monthly activity across available years.', timing: 'Open calendar', view: 'calendar' },
+      { icon: '⌕', title: 'Review regional trends', description: 'Compare annual totals, seasonality, and historical baselines.', timing: 'Open trends', view: 'trend' },
     ],
   },
 };
@@ -112,8 +87,8 @@ const ROLE_CONTENT = {
     const difference = average > 0 ? ((activity - average) / average) * 100 : null;
     const region = String(selection.region || 'selected region').replaceAll('-', ' ');
     const comparison = average === null
-      ? `No earlier same-month values are available in the selected range. The calendar shows ${Math.round(activity).toLocaleString()} detections for ${selection.monthName} ${selection.year}.`
-      : `${Math.round(activity).toLocaleString()} detections in ${region} during ${selection.monthName} ${selection.year}; earlier same-month average is ${Math.round(average).toLocaleString()} across ${prior.length} ${prior.length === 1 ? 'year' : 'years'} (${difference >= 0 ? '+' : ''}${difference.toFixed(0)}%). Values use ${selection.mode}.`;
+      ? `No earlier same-month values are available in the selected range. The calendar shows ${Math.round(activity).toLocaleString()} activity units for ${selection.monthName} ${selection.year}.`
+      : `${Math.round(activity).toLocaleString()} activity units in ${region} during ${selection.monthName} ${selection.year}; earlier same-month average is ${Math.round(average).toLocaleString()} across ${prior.length} ${prior.length === 1 ? 'year' : 'years'} (${difference >= 0 ? '+' : ''}${difference.toFixed(0)}%). Values use ${selection.mode}.`;
 
     const actionTemplates = {
       'general-view': [
@@ -149,11 +124,75 @@ const ROLE_CONTENT = {
         { label: 'Earlier same-month average', value: average === null ? '—' : Math.round(average).toLocaleString(), caption: average === null ? 'No earlier records in range' : `${prior.length} earlier ${prior.length === 1 ? 'year' : 'years'}` },
         { label: 'Compared with earlier average', value: difference === null ? '—' : `${difference >= 0 ? '+' : ''}${difference.toFixed(0)}%`, caption: difference === null ? 'Baseline unavailable' : 'Historical comparison, not a forecast' },
       ],
-      summary: comparison,
+      summary: `${({ 'general-view': 'Explore the selected period.', 'emergency-response': 'Preparedness context:', scientist: 'Research context:', 'land-manager': 'Seasonal planning context:', firefighter: 'Operational context:' })[selectedRole] || 'Selected viewpoint:'} ${comparison}`,
       actions: actionTemplates[selectedRole] || actionTemplates['general-view'],
       monthName: selection.monthName,
       year: selection.year,
     };
+  }
+
+  function roleStats(role) {
+    const context = window.MOSAIC_VIEW_CONTEXT?.() || {};
+    const mode = context.mode || 'harmonized';
+    const source = window.MOSAIC_PROVINCE_MONTHS?.[context.region] || {};
+    const factors = window.MOSAIC_CALIBRATION_FACTORS || {};
+    const start = context.start || '2000-11-01';
+    const end = context.end || '2025-12-31';
+    const firstYear = Math.max(2002, Number(start.slice(0, 4)), mode === 'viirs' ? 2012 : 2002);
+    const lastYear = Math.min(2025, Number(end.slice(0, 4)), mode === 'modis' ? 2011 : 2025);
+    const yearly = new Map();
+    for (let year = firstYear; year <= lastYear; year += 1) yearly.set(year, 0);
+    const monthlyTotals = Array(12).fill(0);
+    Object.entries(source).forEach(([month, rawValue]) => {
+      if (month < start.slice(0, 7) || month > end.slice(0, 7)) return;
+      const [year, monthNumber] = month.split('-').map(Number);
+      if (mode === 'modis' && year > 2011) return;
+      if (mode === 'viirs' && year < 2012) return;
+      const factor = Number(factors[String(monthNumber)]) || 1;
+      const value = mode === 'modis' ? Number(rawValue) / factor : Number(rawValue);
+      if (!Number.isFinite(value)) return;
+      yearly.set(year, (yearly.get(year) || 0) + value);
+      monthlyTotals[monthNumber - 1] += value;
+    });
+    const entries = [...yearly.entries()].sort((a, b) => a[0] - b[0]);
+    const total = entries.reduce((sum, [, value]) => sum + value, 0);
+    const peakIndex = monthlyTotals.indexOf(Math.max(...monthlyTotals));
+    const peakYear = entries.at(-1);
+    const previous = entries.slice(-6, -1).map((entry) => entry[1]);
+    const baseline = previous.length ? previous.reduce((sum, value) => sum + value, 0) / previous.length : null;
+    const anomaly = baseline > 0 && peakYear ? ((peakYear[1] - baseline) / baseline) * 100 : null;
+    const fmt = (value) => Math.round(value).toLocaleString();
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const modeLabel = mode === 'modis' ? 'MODIS raw' : mode === 'viirs' ? 'VIIRS raw' : 'Harmonized';
+    const stat = (label, value, caption) => ({ label, value, caption });
+    const defaultStats = [
+      stat('Selected-period activity', fmt(total), `${entries.length} archive years · ${modeLabel}`),
+      stat('Highest-activity month', monthNames[peakIndex] || '—', `${fmt(monthlyTotals[peakIndex] || 0)} activity units`),
+      stat('Archive coverage', entries.length ? `${entries[0][0]}–${entries.at(-1)[0]}` : 'No records', 'Provincial data through 2025'),
+    ];
+    const byRole = {
+      'emergency-response': [
+        stat('Latest archive year', peakYear ? fmt(peakYear[1]) : '—', peakYear ? `${peakYear[0]} · activity units` : 'No years in selected range'),
+        stat('Historical anomaly', anomaly === null ? '—' : `${anomaly >= 0 ? '+' : ''}${anomaly.toFixed(0)}%`, baseline === null ? 'Baseline unavailable' : `Versus previous ${previous.length} archive years`),
+        stat('Forecast information', 'Historical only', 'No live weather or incident feed'),
+      ],
+      scientist: [
+        stat('Selected-period activity', fmt(total), `${entries.length} years · ${modeLabel}`),
+        stat('Sensor calibration', mode === 'harmonized' ? 'Applied' : mode === 'modis' ? 'Off' : 'Not needed', mode === 'harmonized' ? 'Monthly MODIS factors; VIIRS unchanged' : 'MODIS calibration can be compared in harmonized mode'),
+        stat('Data coverage', entries.length ? `${entries[0][0]}–${entries.at(-1)[0]}` : 'No records', 'Provincial monthly archive'),
+      ],
+      'land-manager': [
+        stat('Peak activity season', monthNames[peakIndex] || '—', `${fmt(monthlyTotals[peakIndex] || 0)} activity units`),
+        stat('Active months', monthlyTotals.filter((value) => value > 0).length.toString(), 'Across selected period'),
+        stat('Recurring peak month', monthNames[peakIndex] || '—', 'Highest combined monthly activity'),
+      ],
+      firefighter: [
+        stat('Latest archive year', peakYear ? String(peakYear[0]) : '—', peakYear ? `${fmt(peakYear[1])} activity units` : 'No years in selected range'),
+        stat('Detection details', 'Map records', 'Coordinates and FRP where recorded'),
+        stat('Confidence & conditions', 'Unavailable', 'Not included in the current archive'),
+      ],
+    };
+    return byRole[role] || defaultStats;
   }
 
   function scoreClass(score) {
@@ -196,11 +235,21 @@ const ROLE_CONTENT = {
     rolePanel.append(makeElement('h4', 'hotspot-section-heading hotspot-actions-heading', 'Suggested action items'));
     const actionList = makeElement('ul', 'hotspot-dialog-actions');
     (content.actions || []).forEach((action) => {
-      const item = makeElement('li', 'hotspot-dialog-action');
+      const item = makeElement('li', '');
+      const card = makeElement(action.view || action.action ? 'button' : 'div', 'hotspot-dialog-action');
+      if (card.tagName === 'BUTTON') {
+        card.type = 'button';
+        card.addEventListener('click', () => {
+          hotspotDialog?.close();
+          if (action.view) window.setMosaicView?.(action.view);
+          else if (action.action === 'download') document.querySelector('#download-csv')?.click();
+        });
+      }
       const copy = makeElement('span', 'hotspot-dialog-action-copy');
       copy.append(makeElement('strong', '', action.title));
       copy.append(makeElement('span', '', action.description));
-      item.append(copy, makeElement('span', 'hotspot-dialog-action-timing', action.timing));
+      card.append(copy, makeElement('span', 'hotspot-dialog-action-timing', action.timing));
+      item.append(card);
       actionList.append(item);
     });
     rolePanel.append(actionList);
@@ -250,6 +299,7 @@ const ROLE_CONTENT = {
       renderHotspotDialog(activeHotspot, nextRole);
     }
   });
+  document.querySelector('#harmonization-mode')?.addEventListener('change', render);
   document.querySelector('#hotspot-dialog-close')?.addEventListener('click', () => hotspotDialog.close());
   hotspotDialog?.addEventListener('click', (event) => {
     if (event.target === hotspotDialog) hotspotDialog.close();
@@ -272,8 +322,8 @@ const ROLE_CONTENT = {
     const module = makeElement('section', 'insights-module');
     module.setAttribute('aria-labelledby', 'insights-title');
 
-    const badge = makeElement('span', 'demo-badge', 'Demo data');
-    badge.setAttribute('aria-label', 'Demo data, illustrative values');
+    const badge = makeElement('span', 'demo-badge', 'Provincial archive · through 2025');
+    badge.setAttribute('aria-label', 'Provincial historical archive through 2025');
     module.append(badge);
 
     const header = makeElement('header', 'insights-module-header');
@@ -301,8 +351,8 @@ const ROLE_CONTENT = {
     module.append(featureList);
 
     const stats = makeElement('div', 'insight-stats');
-    stats.setAttribute('aria-label', 'Illustrative summary statistics');
-    (monthContext?.stats || content.stats).forEach((stat) => {
+    stats.setAttribute('aria-label', 'Selected-period activity statistics');
+    (monthContext?.stats || roleStats(selectedRole)).forEach((stat) => {
       const card = makeElement('article', 'insight-stat');
       card.append(makeElement('span', 'insight-stat-label', stat.label));
       card.append(makeElement('strong', 'insight-stat-value', stat.value));
@@ -311,47 +361,16 @@ const ROLE_CONTENT = {
     });
     module.append(stats);
 
-    const outlookSection = makeElement('section', 'outlook-section');
+    const outlookSection = makeElement('section', 'outlook-section role-guidance');
     outlookSection.setAttribute('aria-labelledby', 'outlook-title');
     const outlookHeader = makeElement('div', 'outlook-heading');
-    outlookHeader.append(makeElement('h3', '', monthContext ? 'Selected month context' : '7-day outlook'));
+    outlookHeader.append(makeElement('h3', '', monthContext ? 'Selected month context' : 'View guidance'));
     outlookHeader.lastElementChild.id = 'outlook-title';
-    outlookHeader.append(makeElement('span', 'illustrative-label', monthContext ? 'SELECT A MONTH IN THE CALENDAR TO UPDATE THIS SUMMARY' : 'ILLUSTRATIVE · SCORE OUT OF 100'));
+    outlookHeader.append(makeElement('span', 'illustrative-label', monthContext ? 'HISTORICAL COMPARISON' : content.name.toUpperCase()));
     outlookSection.append(outlookHeader);
-
-    const dayRow = makeElement('div', 'outlook-days');
-    dayRow.setAttribute('role', 'group');
-    dayRow.setAttribute('aria-label', 'Illustrative daily outlook scores, Monday through Sunday');
-    const selection = makeElement('p', 'outlook-selection');
-    selection.id = 'outlook-selection';
-    selection.setAttribute('aria-live', 'polite');
-    selection.textContent = 'Select a day to see its illustrative score.';
-
-    (monthContext ? [] : content.outlook).forEach((score, index) => {
-      const day = DAYS[index];
-      const band = scoreClass(score);
-      const tile = makeElement('button', `outlook-day ${band.className}`);
-      tile.type = 'button';
-      tile.setAttribute('aria-pressed', 'false');
-      tile.setAttribute('aria-label', `${day}: ${score} out of 100, ${band.label.toLowerCase()} illustrative outlook score`);
-      tile.append(makeElement('span', 'outlook-day-name', day));
-      const icon = makeElement('span', 'outlook-day-icon', DAY_ICONS[index]);
-      icon.setAttribute('aria-hidden', 'true');
-      tile.append(icon);
-      tile.append(makeElement('span', 'outlook-day-score', `${score}/100`));
-      tile.append(makeElement('span', 'outlook-day-level', band.label));
-      tile.addEventListener('click', () => {
-        dayRow.querySelectorAll('.outlook-day').forEach((otherTile) => otherTile.setAttribute('aria-pressed', 'false'));
-        tile.setAttribute('aria-pressed', 'true');
-        selection.textContent = `${day}: ${score} / 100`;
-      });
-      dayRow.append(tile);
-    });
-    if (monthContext) {
-      outlookSection.append(makeElement('p', 'outlook-selection', `Showing historical month context for ${monthContext.monthName} ${monthContext.year}. The calendar popup compares this month with earlier years.`));
-    } else {
-      outlookSection.append(dayRow, selection);
-    }
+    outlookSection.append(makeElement('p', 'outlook-selection', monthContext
+      ? `Historical month context for ${monthContext.monthName} ${monthContext.year}. ${content.guidance}`
+      : content.guidance));
     module.append(outlookSection);
 
     const actionsSection = makeElement('section', 'actions-section');
@@ -362,7 +381,15 @@ const ROLE_CONTENT = {
     const actionList = makeElement('ul', 'action-list');
 
     (monthContext ? monthContext.actions.map(([title, description]) => ({ icon: '⌖', title, description, timing: 'Review' })) : content.actions).forEach((action) => {
-      const item = makeElement('li', 'action-card');
+      const item = makeElement('li', '');
+      const target = makeElement(action.view || action.action ? 'button' : 'div', 'action-card');
+      if (target.tagName === 'BUTTON') {
+        target.type = 'button';
+        target.addEventListener('click', () => {
+          if (action.view) window.setMosaicView?.(action.view);
+          else if (action.action === 'download') document.querySelector('#download-csv')?.click();
+        });
+      }
       const icon = makeElement('span', 'action-icon', action.icon);
       icon.setAttribute('aria-hidden', 'true');
       const copy = makeElement('span', 'action-copy');
@@ -370,7 +397,8 @@ const ROLE_CONTENT = {
       copy.append(makeElement('span', 'action-description', action.description));
       const timing = makeElement('span', 'action-timing', action.timing);
       timing.setAttribute('aria-label', `Timing: ${action.timing}`);
-      item.append(icon, copy, timing);
+      target.append(icon, copy, timing);
+      item.append(target);
       actionList.append(item);
     });
     actionsSection.append(actionList);
