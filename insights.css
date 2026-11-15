@@ -2,43 +2,43 @@
 #insights { min-width: 0; }
 .insights-module { position: relative; padding: 1px 2px 4px; }
 .insights-module-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-right: 82px; }
-.insights-kicker, .insights-subheading { color: var(--orange-light); font: 8px var(--mono); letter-spacing: .13em; text-transform: uppercase; }
+.insights-kicker, .insights-subheading { color: var(--orange-light); font: 10px var(--mono); letter-spacing: .13em; text-transform: uppercase; }
 .insights-kicker { margin: 0 0 5px; }
-.insights-module h2 { margin: 0; color: var(--text); font: 600 17px/1.25 var(--display); letter-spacing: -.025em; }
-.insights-title-description { color: var(--muted); font-size: 10px; line-height: 1.5; margin: 5px 0 0; }
-.demo-badge { position: absolute; top: 0; right: 0; padding: 5px 7px; color: #ffd7ad; background: rgba(255, 116, 56, .11); border: 1px solid rgba(255, 116, 56, .42); border-radius: 3px; font: 8px var(--mono); letter-spacing: .04em; }
+.insights-module h2 { margin: 0; color: var(--text); font: 600 21px/1.25 var(--display); letter-spacing: -.025em; }
+.insights-title-description { color: var(--muted); font-size: 13px; line-height: 1.5; margin: 6px 0 0; }
+.demo-badge { position: absolute; top: 0; right: 0; padding: 6px 9px; color: #ffd7ad; background: rgba(255, 116, 56, .11); border: 1px solid rgba(255, 116, 56, .42); border-radius: 3px; font: 10px var(--mono); letter-spacing: .04em; }
 .insight-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 13px 0 15px; }
 .insight-stat { min-width: 0; padding: 9px 10px 8px; background: #171c19; border: 1px solid #303833; border-radius: 4px; }
-.insight-stat-label { display: block; min-height: 22px; color: var(--muted); font-size: 9px; line-height: 1.35; }
-.insight-stat-value { display: block; overflow-wrap: anywhere; margin-top: 4px; color: var(--orange-light); font: 600 15px/1.2 var(--display); }
-.insight-stat-caption { display: block; margin-top: 4px; color: var(--subtle); font-size: 8px; line-height: 1.4; }
+.insight-stat-label { display: block; min-height: 22px; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.insight-stat-value { display: block; overflow-wrap: anywhere; margin-top: 5px; color: var(--orange-light); font: 600 19px/1.2 var(--display); }
+.insight-stat-caption { display: block; margin-top: 5px; color: var(--subtle); font-size: 11px; line-height: 1.45; }
 .outlook-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 7px; }
-.outlook-heading h3, .actions-heading { margin: 0; color: var(--text); font: 600 11px var(--display); }
-.illustrative-label { color: var(--subtle); font: 8px var(--mono); }
+.outlook-heading h3, .actions-heading { margin: 0; color: var(--text); font: 600 14px var(--display); }
+.illustrative-label { color: var(--subtle); font: 10px var(--mono); }
 .outlook-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
-.outlook-day { min-width: 0; min-height: 57px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 5px 2px; border: 1px solid transparent; border-radius: 4px; cursor: pointer; transition: transform .15s ease, border-color .15s ease, filter .15s ease; }
+.outlook-day { min-width: 0; min-height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 6px 3px; border: 1px solid transparent; border-radius: 4px; cursor: pointer; transition: transform .15s ease, border-color .15s ease, filter .15s ease; }
 .outlook-day:hover { transform: translateY(-1px); filter: brightness(1.08); }
 .outlook-day:focus-visible { outline: 2px solid #fff1d9; outline-offset: 2px; }
 .outlook-day[aria-pressed="true"] { border-color: #f2f3ed; box-shadow: 0 0 0 1px rgba(242, 243, 237, .2); }
-.outlook-day-name { font: 8px var(--mono); }
-.outlook-day-icon { font-size: 13px; line-height: 1.2; }
-.outlook-day-score { font: 600 9px var(--mono); }
-.outlook-day-level { font-size: 7px; line-height: 1.1; }
+.outlook-day-name { font: 11px var(--mono); }
+.outlook-day-icon { font-size: 16px; line-height: 1.2; }
+.outlook-day-score { font: 600 12px var(--mono); }
+.outlook-day-level { font-size: 10px; line-height: 1.2; }
 .score-low { color: #11291b; background: #8bd49a; }
 .score-moderate { color: #312610; background: #f0d66f; }
 .score-elevated { color: #321c10; background: #f29a52; }
 .score-high { color: #fff2ec; background: #c94c3e; }
-.outlook-selection { min-height: 17px; margin: 6px 0 0; color: var(--muted); font: 9px var(--mono); }
+.outlook-selection { min-height: 20px; margin: 8px 0 0; color: var(--muted); font: 11px var(--mono); }
 .outlook-selection strong { color: var(--text); font-weight: 500; }
-.actions-heading { display: flex; align-items: center; gap: 7px; margin: 11px 0 7px; }
+.actions-heading { display: flex; align-items: center; gap: 8px; margin: 14px 0 9px; }
 .actions-heading::before { content: ''; width: 3px; height: 12px; background: var(--orange); border-radius: 2px; }
 .action-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; list-style: none; margin: 0; padding: 0; }
-.action-card { min-width: 0; display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: start; gap: 7px; padding: 8px; background: rgba(23, 28, 25, .72); border: 1px solid #303833; border-radius: 4px; }
-.action-icon { display: grid; place-items: center; width: 19px; height: 19px; border-radius: 50%; color: var(--orange-light); background: rgba(255, 116, 56, .1); font-size: 10px; }
+.action-card { min-width: 0; display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: start; gap: 9px; padding: 11px; background: rgba(23, 28, 25, .72); border: 1px solid #303833; border-radius: 4px; }
+.action-icon { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: var(--orange-light); background: rgba(255, 116, 56, .1); font-size: 12px; }
 .action-copy { min-width: 0; }
-.action-title { display: block; margin: 1px 0 3px; color: var(--text); font-size: 9px; font-weight: 700; line-height: 1.35; }
-.action-description { display: block; color: var(--muted); font-size: 8px; line-height: 1.45; }
-.action-timing { white-space: nowrap; margin-top: 1px; padding: 3px 4px; border: 1px solid #414b43; border-radius: 3px; color: #c4ccc5; font: 7px var(--mono); }
+.action-title { display: block; margin: 1px 0 4px; color: var(--text); font-size: 12px; font-weight: 700; line-height: 1.4; }
+.action-description { display: block; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.action-timing { white-space: nowrap; margin-top: 1px; padding: 4px 6px; border: 1px solid #414b43; border-radius: 3px; color: #c4ccc5; font: 9px var(--mono); }
 .insights-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 @media (max-width: 820px) {
@@ -48,24 +48,24 @@
 @media (max-width: 640px) {
   .insights-module { padding-top: 1px; }
   .insights-module-header { padding-right: 78px; }
-  .insights-module h2 { font-size: 15px; }
+  .insights-module h2 { font-size: 19px; }
   .insight-stats { gap: 5px; margin: 11px 0 13px; }
   .insight-stat { padding: 7px 6px; }
-  .insight-stat-label { font-size: 8px; min-height: 29px; }
-  .insight-stat-value { font-size: 13px; }
-  .insight-stat-caption { font-size: 7px; }
+  .insight-stat-label { font-size: 10px; min-height: 30px; }
+  .insight-stat-value { font-size: 16px; }
+  .insight-stat-caption { font-size: 9px; }
   .outlook-days { gap: 4px; }
-  .outlook-day { min-height: 55px; }
-  .outlook-day-name { font-size: 7px; }
-  .outlook-day-icon { font-size: 12px; }
-  .outlook-day-score { font-size: 8px; }
-  .outlook-day-level { font-size: 6px; }
+  .outlook-day { min-height: 66px; }
+  .outlook-day-name { font-size: 9px; }
+  .outlook-day-icon { font-size: 14px; }
+  .outlook-day-score { font-size: 10px; }
+  .outlook-day-level { font-size: 8px; }
   .action-list { gap: 6px; }
 }
 @media (max-width: 360px) {
   .insight-stat-label { min-height: 35px; }
   .outlook-days { gap: 3px; }
   .outlook-day { padding-left: 0; padding-right: 0; }
-  .action-timing { font-size: 6px; }
+  .action-timing { font-size: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { .outlook-day { transition-duration: .01ms; } }
