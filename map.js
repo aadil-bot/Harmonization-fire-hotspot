@@ -614,6 +614,23 @@ async function selectProvinceAt(lat, lon) {
       }
     } catch { /* Keep checking other overlapping province bounds. */ }
   }
+  // Simplified boundary files can omit tiny coastline fragments. If the click
+  // falls inside a region's configured extent but outside a surviving polygon,
+  // use the closest matching region extent instead of ignoring the selection.
+  if (candidates.length) {
+    const region = candidates.reduce((closest, item) => {
+      const distance = (entry) => {
+        const [w, s, e, n] = REGION_BOUNDS[entry.value];
+        const centerLat = (s + n) / 2;
+        return ((lon - (w + e) / 2) * Math.cos(centerLat * Math.PI / 180)) ** 2 + (lat - centerLat) ** 2;
+      };
+      return distance(item) < distance(closest) ? item : closest;
+    }, candidates[0]);
+    controls.region.value = region.value;
+    applyControlChange(controls.region);
+    document.querySelector('#map-search-status').textContent = `${region.label} selected from the map.`;
+    return;
+  }
   document.querySelector('#map-search-status').textContent = 'No Canadian province or territory was found at that point.';
 }
 
@@ -859,7 +876,6 @@ if (window.L) {
     } catch { /* Keep the rest of the province boundaries available. */ }
   }));
   fireMap.on('click', (event) => {
-    if (event.originalEvent?.target?.closest?.('.leaflet-interactive')) return;
     selectProvinceAt(event.latlng.lat, event.latlng.lng);
   });
   window.addEventListener('resize', () => fireMap && fireMap.invalidateSize());
