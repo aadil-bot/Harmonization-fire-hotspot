@@ -33,6 +33,13 @@
   const dayList = document.querySelector('#calendar-day-list');
   const backToYear = document.querySelector('#calendar-back-year');
   const backToMonth = document.querySelector('#calendar-back-month');
+  const historyDialog = document.querySelector('#calendar-history-dialog');
+  const historyTitle = document.querySelector('#calendar-history-title');
+  const historySummary = document.querySelector('#calendar-history-summary');
+  const historyBars = document.querySelector('#calendar-history-bars');
+  const roleContextHeading = document.querySelector('#calendar-role-heading');
+  const roleContextSummary = document.querySelector('#calendar-role-summary');
+  const roleContextActions = document.querySelector('#calendar-role-actions');
   if (!section || !status || !table) return;
 
   let latestFilters = readCurrentFilters();
@@ -104,6 +111,21 @@
     if (count <= bounds[1]) return 2;
     if (count <= bounds[2]) return 3;
     return 4;
+  }
+
+  function activityColour(count, maximum) {
+    const stops = [
+      [0, [240, 230, 205]], [0.38, [242, 173, 110]],
+      [0.7, [232, 107, 61]], [1, [118, 47, 43]],
+    ];
+    const position = maximum > 0 ? Math.log1p(Math.max(0, count)) / Math.log1p(maximum) : 0;
+    let lower = stops[0], upper = stops[stops.length - 1];
+    for (let index = 1; index < stops.length; index += 1) {
+      if (position <= stops[index][0]) { lower = stops[index - 1]; upper = stops[index]; break; }
+    }
+    const portion = (position - lower[0]) / (upper[0] - lower[0] || 1);
+    const rgb = lower[1].map((channel, index) => Math.round(channel + (upper[1][index] - channel) * portion));
+    return `rgb(${rgb.join(',')})`;
   }
 
   function monthName(year, monthIndex) {
@@ -232,6 +254,86 @@
     });
   }
 
+  function getMonthHistory(year, monthIndex, selectedCount) {
+    const source = window.MOSAIC_PROVINCE_MONTHS?.[latestFilters.region] || {};
+    const mode = document.querySelector('#harmonization-mode')?.value || 'harmonized';
+    const factors = window.MOSAIC_CALIBRATION_FACTORS || {};
+    const archive = window.MOSAIC_PROVINCE_DAILY_META || { start: '2002-07-04', end: '2025-12-31' };
+    const selectedMonth = String(monthIndex + 1).padStart(2, '0');
+    const startMonth = latestFilters.start.slice(0, 7);
+    const endMonth = latestFilters.end.slice(0, 7);
+    const firstYear = Math.max(Number(startMonth.slice(0, 4)), Number(archive.start.slice(0, 4)));
+    const lastYear = Math.min(year, Number(endMonth.slice(0, 4)), Number(archive.end.slice(0, 4)));
+    const result = [];
+    for (let currentYear = firstYear; currentYear <= lastYear; currentYear += 1) {
+      const key = `${currentYear}-${selectedMonth}`;
+      if (key < startMonth || key > endMonth || key < archive.start.slice(0, 7) || key > archive.end.slice(0, 7)) continue;
+      if (mode === 'modis' && currentYear > 2011) continue;
+      if (mode === 'viirs' && currentYear < 2012) continue;
+      const raw = Number(source[key]) || 0;
+      const value = mode === 'modis' ? raw / (Number(factors[selectedMonth]) || 1) : raw;
+      result.push({ year: currentYear, value: currentYear === year ? Number(selectedCount ?? value) : value });
+    }
+    return result;
+  }
+
+  function showHistoryPopup(year, monthIndex, count) {
+    const history = getMonthHistory(year, monthIndex, count);
+    const modeLabel = document.querySelector('#harmonization-mode')?.selectedOptions[0]?.textContent || 'Harmonized Activity';
+    const previousYears = history.filter((entry) => entry.year < year);
+    historyTitle.textContent = `${MONTHS[monthIndex].name} across available years`;
+    historySummary.textContent = `${latestFilters.region.replaceAll('-', ' ')} · ${modeLabel} · selected month: ${year} (${Math.round(count).toLocaleString()}) · comparison: the same calendar month in earlier years within your date range.`;
+    historyBars.replaceChildren();
+    const max = Math.max(1, ...history.map((entry) => entry.value));
+    history.forEach((entry) => {
+      const row = document.createElement('div');
+      row.className = `calendar-history-row${entry.year === year ? ' is-selected' : ''}`;
+      row.setAttribute('role', 'listitem');
+      const yearLabel = document.createElement('span');
+      yearLabel.textContent = String(entry.year);
+      const track = document.createElement('span');
+      track.className = 'calendar-history-track';
+      track.setAttribute('aria-hidden', 'true');
+      const fill = document.createElement('i');
+      fill.style.width = `${entry.value / max * 100}%`;
+      fill.style.setProperty('--activity-color', activityColour(entry.value, max));
+      track.append(fill);
+      const amount = document.createElement('strong');
+      amount.textContent = Math.round(entry.value).toLocaleString();
+      row.append(yearLabel, track, amount);
+      historyBars.append(row);
+    });
+    if (!history.length) historySummary.textContent = `No same-month records are available for ${latestFilters.region.replaceAll('-', ' ')} in this date range.`;
+    roleContextHeading.textContent = 'Loading role-based month insights…';
+    roleContextSummary.textContent = '';
+    roleContextActions.replaceChildren();
+    const detail = {
+      year, month: monthIndex + 1, monthName: MONTHS[monthIndex].name,
+      region: latestFilters.region, role: latestFilters.role, mode: modeLabel,
+      activity: count, history: previousYears,
+    };
+    if (!historyDialog.open) historyDialog.showModal();
+    window.dispatchEvent(new CustomEvent('calendarSelectionChanged', { detail }));
+  }
+
+  document.querySelector('#calendar-history-close').addEventListener('click', () => historyDialog.close());
+  historyDialog.addEventListener('click', (event) => {
+    if (event.target === historyDialog) historyDialog.close();
+  });
+
+  window.addEventListener('calendarInsightsUpdated', (event) => {
+    const detail = event.detail;
+    if (!detail || !historyDialog.open) return;
+    roleContextHeading.textContent = `${detail.roleLabel} · ${detail.monthName} ${detail.year}`;
+    roleContextSummary.textContent = detail.summary;
+    roleContextActions.replaceChildren();
+    detail.actions.forEach((action) => {
+      const item = document.createElement('li');
+      item.textContent = `${action.title}: ${action.description}`;
+      roleContextActions.append(item);
+    });
+  });
+
   function createMonthHeaders() {
     const head = document.createElement('tr');
     const yearHeading = document.createElement('th');
@@ -259,6 +361,7 @@
     const body = table.querySelector('tbody');
     const values = Array.from(monthData.totals.values());
     const bounds = quartiles(values);
+    const maximum = Math.max(0, ...values);
     const rows = document.createDocumentFragment();
 
     for (let year = monthData.firstYear; year <= monthData.lastYear; year += 1) {
@@ -275,6 +378,7 @@
         const button = document.createElement('button');
         button.type = 'button';
         button.className = `calendar-cell ${LEVELS[level - 1].className}`;
+        button.style.setProperty('--activity-color', activityColour(count, maximum));
         button.title = `Open ${monthName(year, monthIndex)} weekly details`;
         button.dataset.month = String(monthIndex);
         button.dataset.year = String(year);
@@ -354,6 +458,7 @@
       drillTitle.textContent = monthName(year, month);
       drillSummary.textContent = 'Loading daily activity for this province…';
       weekList.replaceChildren();
+      showHistoryPopup(year, month, Number(cell.dataset.count) || 0);
       loadProvinceDaily().then(() => {
         if (section.hidden || drillState.year !== year || drillState.month !== month) return;
         renderMonthDrill(year, month);
@@ -458,7 +563,13 @@
   connectTooltips();
   backToYear.addEventListener('click', showYearOverview);
   backToMonth.addEventListener('click', () => renderMonthDrill(drillState.year, drillState.month));
-  document.querySelector('#harmonization-mode')?.addEventListener('change', () => { if (!section.hidden) renderCalendar(); });
+  document.querySelector('#harmonization-mode')?.addEventListener('change', () => {
+    if (historyDialog.open) {
+      historyDialog.close();
+      window.dispatchEvent(new Event('calendarSelectionCleared'));
+    }
+    if (!section.hidden) renderCalendar();
+  });
 
   window.addEventListener('filtersChanged', (event) => {
     const details = event.detail || {};
@@ -470,6 +581,8 @@
     };
     if (nextFilters.region !== latestFilters.region || nextFilters.start !== latestFilters.start || nextFilters.end !== latestFilters.end) {
       drillState = { level: 'year', year: null, month: null, weekIndex: null };
+      if (historyDialog.open) historyDialog.close();
+      window.dispatchEvent(new Event('calendarSelectionCleared'));
     }
     latestFilters = nextFilters;
     if (!section.hidden) renderCalendar();

@@ -98,6 +98,58 @@ const ROLE_CONTENT = {
   const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const DAY_ICONS = ['⌁', '☼', '⌖', '◷', '⌁', '☼', '⌖'];
   let selectedRole = roleSelect?.value || 'general-view';
+  let calendarSelection = null;
+
+  function calendarContext(selection) {
+    const prior = (selection.history || []).map((entry) => Number(entry.value)).filter(Number.isFinite);
+    const average = prior.length ? prior.reduce((sum, value) => sum + value, 0) / prior.length : null;
+    const activity = Number(selection.activity) || 0;
+    const difference = average > 0 ? ((activity - average) / average) * 100 : null;
+    const region = String(selection.region || 'selected region').replaceAll('-', ' ');
+    const comparison = average === null
+      ? `No earlier same-month values are available in the selected range. The calendar shows ${Math.round(activity).toLocaleString()} detections for ${selection.monthName} ${selection.year}.`
+      : `${Math.round(activity).toLocaleString()} detections in ${region} during ${selection.monthName} ${selection.year}; earlier same-month average is ${Math.round(average).toLocaleString()} across ${prior.length} ${prior.length === 1 ? 'year' : 'years'} (${difference >= 0 ? '+' : ''}${difference.toFixed(0)}%). Values use ${selection.mode}.`;
+
+    const actionTemplates = {
+      'general-view': [
+        ['Review the month’s weeks', 'Open the calendar drill-down to see when activity occurred.'],
+        ['Compare the same month historically', `Use the ${prior.length} earlier-year ${selection.monthName} values to put this total in context.`],
+        ['Interpret satellite detections carefully', 'Hotspot detections indicate observations, not confirmed fire perimeters.'],
+      ],
+      'emergency-response': [
+        ['Review the activity period', `Check the weeks within ${selection.monthName} ${selection.year} for timing and concentration.`],
+        ['Compare with prior seasons', 'Use the same-month history as planning context; it is not a current incident report.'],
+        ['Verify through local sources', 'Confirm conditions with trusted reports before making operational decisions.'],
+      ],
+      scientist: [
+        ['Inspect weekly distribution', 'Use the month drill-down to see how the total is distributed through the month.'],
+        ['Review the historical baseline', `Compare with ${prior.length} available earlier same-month values.`],
+        ['Account for sensor mode', `This comparison is currently using ${selection.mode}; consider sensor coverage and calibration when interpreting it.`],
+      ],
+      'land-manager': [
+        ['Check recurring seasonal activity', `Compare ${selection.monthName} with the earlier years shown in the calendar.`],
+        ['Inspect activity timing', 'Open the weekly breakdown to identify when detections were concentrated.'],
+        ['Add local land context', 'Review detections alongside local land-cover and management information.'],
+      ],
+      firefighter: [
+        ['Open the weekly breakdown', `Review detection timing within ${selection.monthName} ${selection.year}.`],
+        ['Check individual observations', 'Use the map and available detection details to inspect location, timestamp, and sensor.'],
+        ['Verify before response', 'Satellite hotspots require confirmation from incident reports or field sources.'],
+      ],
+    };
+    return {
+      average,
+      stats: [
+        { label: `${selection.monthName} ${selection.year} activity`, value: Math.round(activity).toLocaleString(), caption: `${region} · ${selection.mode}` },
+        { label: 'Earlier same-month average', value: average === null ? '—' : Math.round(average).toLocaleString(), caption: average === null ? 'No earlier records in range' : `${prior.length} earlier ${prior.length === 1 ? 'year' : 'years'}` },
+        { label: 'Compared with earlier average', value: difference === null ? '—' : `${difference >= 0 ? '+' : ''}${difference.toFixed(0)}%`, caption: difference === null ? 'Baseline unavailable' : 'Historical comparison, not a forecast' },
+      ],
+      summary: comparison,
+      actions: actionTemplates[selectedRole] || actionTemplates['general-view'],
+      monthName: selection.monthName,
+      year: selection.year,
+    };
+  }
 
   function scoreClass(score) {
     if (score < 25) return { className: 'score-low', label: 'Low' };
@@ -115,6 +167,7 @@ const ROLE_CONTENT = {
 
   function render() {
     const content = ROLE_CONTENT[selectedRole] || ROLE_CONTENT['general-view'];
+    const monthContext = calendarSelection ? calendarContext(calendarSelection) : null;
     root.replaceChildren();
 
     const module = makeElement('section', 'insights-module');
@@ -133,6 +186,14 @@ const ROLE_CONTENT = {
     header.append(titleGroup);
     module.append(header);
 
+    if (monthContext) {
+      const contextBanner = makeElement('div', 'calendar-selection-banner');
+      contextBanner.setAttribute('role', 'status');
+      contextBanner.append(makeElement('strong', '', `Calendar selection · ${calendarSelection.region.replaceAll('-', ' ')} · ${monthContext.monthName} ${monthContext.year}`));
+      contextBanner.append(makeElement('span', '', monthContext.summary));
+      module.append(contextBanner);
+    }
+
     const featureList = makeElement('ul', 'role-feature-list');
     featureList.setAttribute('aria-label', `${content.name} view includes`);
     (content.features || []).forEach((feature) => {
@@ -142,7 +203,7 @@ const ROLE_CONTENT = {
 
     const stats = makeElement('div', 'insight-stats');
     stats.setAttribute('aria-label', 'Illustrative summary statistics');
-    content.stats.forEach((stat) => {
+    (monthContext?.stats || content.stats).forEach((stat) => {
       const card = makeElement('article', 'insight-stat');
       card.append(makeElement('span', 'insight-stat-label', stat.label));
       card.append(makeElement('strong', 'insight-stat-value', stat.value));
@@ -154,9 +215,9 @@ const ROLE_CONTENT = {
     const outlookSection = makeElement('section', 'outlook-section');
     outlookSection.setAttribute('aria-labelledby', 'outlook-title');
     const outlookHeader = makeElement('div', 'outlook-heading');
-    outlookHeader.append(makeElement('h3', '', '7-day outlook'));
+    outlookHeader.append(makeElement('h3', '', monthContext ? 'Selected month context' : '7-day outlook'));
     outlookHeader.lastElementChild.id = 'outlook-title';
-    outlookHeader.append(makeElement('span', 'illustrative-label', 'ILLUSTRATIVE · SCORE OUT OF 100'));
+    outlookHeader.append(makeElement('span', 'illustrative-label', monthContext ? 'SELECT A MONTH IN THE CALENDAR TO UPDATE THIS SUMMARY' : 'ILLUSTRATIVE · SCORE OUT OF 100'));
     outlookSection.append(outlookHeader);
 
     const dayRow = makeElement('div', 'outlook-days');
@@ -167,7 +228,7 @@ const ROLE_CONTENT = {
     selection.setAttribute('aria-live', 'polite');
     selection.textContent = 'Select a day to see its illustrative score.';
 
-    content.outlook.forEach((score, index) => {
+    (monthContext ? [] : content.outlook).forEach((score, index) => {
       const day = DAYS[index];
       const band = scoreClass(score);
       const tile = makeElement('button', `outlook-day ${band.className}`);
@@ -187,7 +248,11 @@ const ROLE_CONTENT = {
       });
       dayRow.append(tile);
     });
-    outlookSection.append(dayRow, selection);
+    if (monthContext) {
+      outlookSection.append(makeElement('p', 'outlook-selection', `Showing historical month context for ${monthContext.monthName} ${monthContext.year}. The calendar popup compares this month with earlier years.`));
+    } else {
+      outlookSection.append(dayRow, selection);
+    }
     module.append(outlookSection);
 
     const actionsSection = makeElement('section', 'actions-section');
@@ -197,7 +262,7 @@ const ROLE_CONTENT = {
     actionsSection.append(actionsTitle);
     const actionList = makeElement('ul', 'action-list');
 
-    content.actions.forEach((action) => {
+    (monthContext ? monthContext.actions.map(([title, description]) => ({ icon: '⌖', title, description, timing: 'Review' })) : content.actions).forEach((action) => {
       const item = makeElement('li', 'action-card');
       const icon = makeElement('span', 'action-icon', action.icon);
       icon.setAttribute('aria-hidden', 'true');
@@ -212,6 +277,18 @@ const ROLE_CONTENT = {
     actionsSection.append(actionList);
     module.append(actionsSection);
     root.append(module);
+
+    if (monthContext) {
+      window.dispatchEvent(new CustomEvent('calendarInsightsUpdated', {
+        detail: {
+          roleLabel: content.name,
+          monthName: monthContext.monthName,
+          year: monthContext.year,
+          summary: monthContext.summary,
+          actions: monthContext.actions.map(([title, description]) => ({ title, description })),
+        },
+      }));
+    }
   }
 
   // The map page emits this event whenever a sidebar filter changes.
@@ -221,6 +298,17 @@ const ROLE_CONTENT = {
       selectedRole = role;
       render();
     }
+  });
+
+  window.addEventListener('calendarSelectionChanged', (event) => {
+    calendarSelection = event.detail || null;
+    if (calendarSelection?.role && ROLE_CONTENT[calendarSelection.role]) selectedRole = calendarSelection.role;
+    render();
+  });
+
+  window.addEventListener('calendarSelectionCleared', () => {
+    calendarSelection = null;
+    render();
   });
 
   // The initial filter event may have fired before this deferred module loaded.
