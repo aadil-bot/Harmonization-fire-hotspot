@@ -1,5 +1,35 @@
 /* Role insights module. It inherits the MOSAIC theme variables from map.css. */
 #insights { min-width: 0; }
+.hotspot-dialog { width:min(980px,calc(100vw - 28px)); max-width:none; max-height:min(92vh,900px); padding:0; overflow:hidden; color:var(--text); background:#141916; border:1px solid #5b5147; border-radius:10px; box-shadow:0 24px 80px rgba(0,0,0,.72); }
+.hotspot-dialog::backdrop { background:rgba(3,7,5,.78); backdrop-filter:blur(3px); }
+.hotspot-dialog-shell { max-height:min(92vh,900px); overflow:auto; padding:clamp(18px,3vw,30px); }
+.hotspot-dialog-header { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; padding-bottom:17px; border-bottom:1px solid #303833; }
+.hotspot-dialog-header .eyebrow { margin:0 0 6px; }
+.hotspot-dialog-header h2 { margin:0; color:var(--text); font:600 clamp(23px,3vw,32px)/1.15 var(--display); }
+.hotspot-dialog-close { display:grid; place-items:center; flex:0 0 38px; width:38px; height:38px; color:var(--text); background:#202722; border:1px solid #48534b; border-radius:5px; font:26px/1 var(--sans); cursor:pointer; }
+.hotspot-dialog-close:hover { border-color:var(--orange-light); background:#2b332d; }
+.hotspot-dialog :focus-visible { outline:2px solid #ffd2ae; outline-offset:3px; }
+.hotspot-role-panel { margin-top:18px; padding:18px; background:linear-gradient(140deg,rgba(255,116,56,.1),rgba(25,32,27,.95) 42%); border:1px solid rgba(255,155,95,.3); border-radius:7px; }
+.hotspot-role-kicker { margin:0 0 5px; color:var(--orange-light); font:11px var(--mono); letter-spacing:.11em; text-transform:uppercase; }
+.hotspot-role-panel > h3 { margin:0; color:var(--text); font:600 22px/1.25 var(--display); }
+.hotspot-role-description { margin:6px 0 15px; color:#d3dbd4; font-size:14px; line-height:1.55; }
+.hotspot-section-heading { margin:14px 0 8px; color:var(--text); font:600 14px var(--display); }
+.hotspot-role-insights { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 18px; margin:0; padding-left:19px; color:var(--muted); font-size:13px; line-height:1.5; }
+.hotspot-role-insights li::marker { color:var(--orange-light); }
+.hotspot-actions-heading { margin-top:17px; }
+.hotspot-dialog-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; list-style:none; margin:0; padding:0; }
+.hotspot-dialog-action { display:flex; flex-direction:column; align-items:flex-start; gap:11px; min-width:0; padding:12px; background:#171e19; border:1px solid #39433c; border-radius:5px; }
+.hotspot-dialog-action-copy { display:grid; gap:5px; }
+.hotspot-dialog-action-copy strong { color:#f5f2eb; font-size:13px; line-height:1.35; }
+.hotspot-dialog-action-copy > span { color:var(--muted); font-size:12px; line-height:1.5; }
+.hotspot-dialog-action-timing { padding:4px 7px; color:#ffd2ae; background:rgba(255,116,56,.1); border:1px solid rgba(255,155,95,.3); border-radius:3px; font:10px var(--mono); }
+.hotspot-detection-section { margin-top:20px; }
+.hotspot-detection-section > .hotspot-section-heading { margin:0 0 10px; }
+.hotspot-detail-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:0; }
+.hotspot-detail-card { min-width:0; padding:12px; background:#191f1b; border:1px solid #303833; border-radius:5px; }
+.hotspot-detail-card dt { margin-bottom:6px; color:var(--orange-light); font:10px var(--mono); letter-spacing:.04em; text-transform:uppercase; }
+.hotspot-detail-card dd { margin:0; color:#e0e6e0; font-size:13px; line-height:1.5; overflow-wrap:anywhere; }
+.hotspot-data-note { margin:10px 0 0; color:var(--subtle); font-size:11px; line-height:1.5; }
 .insights-module { position: relative; padding: 1px 2px 4px; }
 .insights-module-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-right: 82px; }
 .insights-kicker, .insights-subheading { color: var(--orange-light); font: 13px var(--mono); letter-spacing: .13em; text-transform: uppercase; }
@@ -67,5 +97,12 @@
   .outlook-days { gap: 3px; }
   .outlook-day { padding-left: 0; padding-right: 0; }
   .action-timing { font-size: 8px; }
+}
+@media (max-width: 640px) {
+  .hotspot-dialog { width:calc(100vw - 16px); max-height:94vh; border-radius:7px; }
+  .hotspot-dialog-shell { max-height:94vh; padding:15px; }
+  .hotspot-role-panel { padding:13px; }
+  .hotspot-role-insights,.hotspot-dialog-actions,.hotspot-detail-grid { grid-template-columns:1fr; }
+  .hotspot-dialog-action { flex-direction:row; justify-content:space-between; gap:10px; }
 }
 @media (prefers-reduced-motion: reduce) { .outlook-day { transition-duration: .01ms; } }

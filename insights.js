@@ -95,6 +95,11 @@ const ROLE_CONTENT = {
   const roleSelect = document.querySelector('#role');
   if (!root) return;
 
+  const hotspotDialog = document.querySelector('#hotspot-dialog');
+  const hotspotDialogContent = document.querySelector('#hotspot-dialog-content');
+  let activeHotspot = null;
+  let dialogReturnFocus = null;
+
   const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const DAY_ICONS = ['⌁', '☼', '⌖', '◷', '⌁', '☼', '⌖'];
   let selectedRole = roleSelect?.value || 'general-view';
@@ -164,6 +169,100 @@ const ROLE_CONTENT = {
     if (text !== undefined) element.textContent = text;
     return element;
   }
+
+  function renderHotspotDialog(row, role) {
+    if (!hotspotDialogContent) return;
+    const content = ROLE_CONTENT[role] || ROLE_CONTENT['general-view'];
+    hotspotDialogContent.replaceChildren();
+
+    // Put the selected viewpoint and recommended actions before raw detection data.
+    const rolePanel = makeElement('section', 'hotspot-role-panel');
+    rolePanel.setAttribute('aria-labelledby', 'hotspot-role-title');
+    rolePanel.append(makeElement('p', 'hotspot-role-kicker', `VIEWPOINT · ${content.name}`));
+    rolePanel.append(makeElement('h3', '', content.title));
+    rolePanel.lastElementChild.id = 'hotspot-role-title';
+    rolePanel.append(makeElement('p', 'hotspot-role-description', content.description));
+    const cellCount = Number(row.harmonized_cells);
+    const fireDays = Number(row.fire_days);
+    const cellSummary = `${Number.isFinite(cellCount) ? cellCount.toLocaleString() : '—'} harmonized fire cells · ${Number.isFinite(fireDays) ? fireDays.toLocaleString() : '—'} observed fire days · ${row.year || 'year unavailable'}`;
+    rolePanel.append(makeElement('p', 'hotspot-cell-summary', cellSummary));
+
+    const insightHeading = makeElement('h4', 'hotspot-section-heading', 'Role-specific insights');
+    rolePanel.append(insightHeading);
+    const insightList = makeElement('ul', 'hotspot-role-insights');
+    (content.features || []).slice(0, 5).forEach((insight) => insightList.append(makeElement('li', '', insight)));
+    rolePanel.append(insightList);
+
+    rolePanel.append(makeElement('h4', 'hotspot-section-heading hotspot-actions-heading', 'Suggested action items'));
+    const actionList = makeElement('ul', 'hotspot-dialog-actions');
+    (content.actions || []).forEach((action) => {
+      const item = makeElement('li', 'hotspot-dialog-action');
+      const copy = makeElement('span', 'hotspot-dialog-action-copy');
+      copy.append(makeElement('strong', '', action.title));
+      copy.append(makeElement('span', '', action.description));
+      item.append(copy, makeElement('span', 'hotspot-dialog-action-timing', action.timing));
+      actionList.append(item);
+    });
+    rolePanel.append(actionList);
+    hotspotDialogContent.append(rolePanel);
+
+    const detailsSection = makeElement('section', 'hotspot-detection-section');
+    detailsSection.setAttribute('aria-labelledby', 'hotspot-detection-title');
+    detailsSection.append(makeElement('h3', 'hotspot-section-heading', 'Detection details'));
+    detailsSection.lastElementChild.id = 'hotspot-detection-title';
+    const firstDate = row.first_fire || 'Not available';
+    const lastDate = row.last_fire || 'Not available';
+    const frp = Number(row.frp_total_mw);
+    const details = [
+      ['Type of fire', 'Satellite active-fire hotspot. A hotspot is not a confirmed wildfire or fire perimeter.'],
+      ['Detection date and time', `${firstDate}${lastDate !== firstDate ? ` through ${lastDate}` : ''}. Time of day is not included in this archive.`],
+      ['Detection confidence', 'Not available in this annual grid-cell archive.'],
+      ['Fire Radiative Power (FRP)', Number.isFinite(frp) ? `${frp.toLocaleString()} MW total for this grid cell in the selected annual record.` : 'Not available in this record.'],
+      ['Satellite source', String(row.source || 'Not available')],
+      ['Geographic coordinates', `${Number(row.lat).toFixed(4)}°, ${Number(row.lon).toFixed(4)}°`],
+    ];
+    const grid = makeElement('dl', 'hotspot-detail-grid');
+    details.forEach(([label, value]) => {
+      const card = makeElement('div', 'hotspot-detail-card');
+      card.append(makeElement('dt', '', label));
+      card.append(makeElement('dd', '', value));
+      grid.append(card);
+    });
+    detailsSection.append(grid);
+    detailsSection.append(makeElement('p', 'hotspot-data-note', 'These values summarize satellite observations in a grid cell. They do not verify an incident on the ground.'));
+    hotspotDialogContent.append(detailsSection);
+  }
+
+  function openHotspotDialog(event) {
+    const detail = event.detail || {};
+    if (!detail.row || !hotspotDialog) return;
+    activeHotspot = detail.row;
+    dialogReturnFocus = document.activeElement;
+    renderHotspotDialog(activeHotspot, detail.role || selectedRole);
+    if (!hotspotDialog.open) hotspotDialog.showModal();
+    document.querySelector('#hotspot-dialog-close')?.focus();
+  }
+
+  window.addEventListener('hotspotViewRequested', openHotspotDialog);
+  window.addEventListener('filtersChanged', (event) => {
+    if (hotspotDialog?.open && activeHotspot) {
+      const nextRole = event.detail?.role || selectedRole;
+      renderHotspotDialog(activeHotspot, nextRole);
+    }
+  });
+  document.querySelector('#hotspot-dialog-close')?.addEventListener('click', () => hotspotDialog.close());
+  hotspotDialog?.addEventListener('click', (event) => {
+    if (event.target === hotspotDialog) hotspotDialog.close();
+  });
+  hotspotDialog?.addEventListener('close', () => {
+    activeHotspot = null;
+    if (dialogReturnFocus?.isConnected && !dialogReturnFocus.closest('[hidden]')) dialogReturnFocus.focus();
+    else {
+      const mapRegion = document.querySelector('#fire-map');
+      mapRegion?.setAttribute('tabindex', '-1');
+      mapRegion?.focus();
+    }
+  });
 
   function render() {
     const content = ROLE_CONTENT[selectedRole] || ROLE_CONTENT['general-view'];

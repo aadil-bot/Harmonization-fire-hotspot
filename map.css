@@ -217,6 +217,15 @@ body.map-maximized .map-panel { border-color: #48524b; }
 
 #fire-map { width: 100%; height: 100%; min-height: 320px; display: block; z-index: 0; }
 .fire-map-fallback { display:block; width:100%; height:100%; min-height:320px; cursor:crosshair; }
+.hotspot-quick-view { position:absolute; z-index:6; }
+.hotspot-quick-view[hidden] { display:none; }
+.hotspot-quick-view button,.hotspot-popup-view { min-width:58px; min-height:34px; padding:0 13px; color:#17120f; background:#ff9b5f; border:1px solid #ffc091; border-radius:5px; font:700 13px var(--sans); box-shadow:0 4px 16px rgba(0,0,0,.35); cursor:pointer; }
+.hotspot-quick-view button:hover,.hotspot-popup-view:hover { background:#ffb27f; }
+.hotspot-quick-view button:focus-visible,.hotspot-popup-view:focus-visible { outline:3px solid #fff2df; outline-offset:2px; }
+.hotspot-view-popup .leaflet-popup-content-wrapper { color:#f2f3ed; background:#171c19; border:1px solid #51463e; border-radius:7px; box-shadow:0 9px 28px rgba(0,0,0,.45); }
+.hotspot-view-popup .leaflet-popup-content { margin:6px; }
+.hotspot-view-popup .leaflet-popup-tip { background:#171c19; border:1px solid #51463e; }
+.hotspot-popup-content { display:grid; place-items:center; min-width:60px; min-height:36px; }
 
 /* Keep the two-ended year range readable over the map on wide and narrow screens. */
 .map-legend { color: #d0d8d0; font-size: 9px; }

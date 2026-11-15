@@ -478,6 +478,7 @@ const mapYearStartValue = document.querySelector('#map-year-start-value');
 const mapYearEndValue = document.querySelector('#map-year-end-value');
 const mapDataStatus = document.querySelector('#map-data-status');
 let mapRows = [];
+let popupRow = null;
 let initialYearRows = window.MOSAIC_YEAR_ROWS || null;
 let fireMap = null;
 let fireLayer = null;
@@ -688,20 +689,38 @@ function fireColour(value) {
   return { color: `rgb(255,${Math.round(105 - intensity * 75)},${Math.round(50 - intensity * 30)})`, opacity: .48 + intensity * .48 };
 }
 
+function requestHotspotView(row) {
+  window.dispatchEvent(new CustomEvent('hotspotViewRequested', {
+    detail: { row: { ...row }, role: state.role },
+  }));
+}
+
 function drawFireMap(rows) {
   if (!fireMap || !fireLayer) return;
   fireLayer.clearLayers();
   rows.forEach((row) => {
     const activity = mapActivityValue(row);
     const colour = fireColour(activity);
-    const radius = Math.min(6, 2.4 + Math.log1p(activity || 0) * .55);
+    const radius = Math.min(6, 2.4 + Math.log1p(activity) * .55);
+    const viewButton = document.createElement('button');
+    viewButton.type = 'button';
+    viewButton.className = 'hotspot-popup-view';
+    viewButton.textContent = 'View';
+    viewButton.setAttribute('aria-label', `View hotspot details at ${row.lat.toFixed(2)}, ${row.lon.toFixed(2)}`);
+    viewButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      fireMap.closePopup();
+      requestHotspotView(row);
+    });
+    const popupContent = document.createElement('div');
+    popupContent.className = 'hotspot-popup-content';
+    popupContent.append(viewButton);
     L.circleMarker([row.lat, row.lon], {
       renderer: mapRenderer, radius, color: '#371e17', weight: .35,
       fillColor: colour.color, fillOpacity: colour.opacity,
-    }).bindPopup(`<strong>Fire type: satellite active-fire hotspot</strong><br>Detection source: ${row.source}<br>Location: ${row.lat.toFixed(2)}°, ${row.lon.toFixed(2)}°<br>${harmonizationMode.value === 'harmonized' ? 'Harmonized fire-cell activity' : 'Sensor fire days'}: ${activity}<br>Observed dates: ${row.first_fire} to ${row.last_fire} (daily data; time of day not provided)<br>Detection confidence: not included in this source archive<br>Fire radiative power (total): ${Number(row.frp_total_mw).toLocaleString()} MW<br>Peak day: ${row.peak_day}<br>This hotspot is not a confirmed fire perimeter. The archive does not distinguish wildfire from prescribed fire.${harmonizationMode.value === 'modis' ? '<br>MODIS before 2012 is calibrated for harmonized comparisons.' : ''}`).addTo(fireLayer);
+    }).bindPopup(popupContent, { className: 'hotspot-view-popup', minWidth: 0, maxWidth: 100, closeButton: false, autoPanPadding: [12, 12] }).addTo(fireLayer);
   });
 }
-
 function drawFallback(rows) {
   const host = document.querySelector('#fire-map');
   let canvas = host.querySelector('canvas');
@@ -752,6 +771,30 @@ function drawFallback(rows) {
     ctx.fill();
   });
   ctx.globalAlpha = 1;
+}
+
+function fallbackHotspotAt(x, y, width, height) {
+  const { project } = fallbackProjection(width, height);
+  let nearest = null;
+  let nearestDistance = 12;
+  getVisibleRows().forEach((row) => {
+    const [screenX, screenY] = project(row.lon, row.lat);
+    const distance = Math.hypot(screenX - x, screenY - y);
+    if (distance < nearestDistance) { nearest = row; nearestDistance = distance; }
+  });
+  return nearest;
+}
+
+function showFallbackViewButton(row, clientX, clientY) {
+  const panel = document.querySelector('.map-panel');
+  const popup = document.querySelector('#hotspot-quick-view');
+  const panelBounds = panel.getBoundingClientRect();
+  const left = Math.min(panelBounds.width - 78, Math.max(8, clientX - panelBounds.left + 10));
+  const top = Math.min(panelBounds.height - 48, Math.max(8, clientY - panelBounds.top + 10));
+  popup.style.left = `${left}px`;
+  popup.style.top = `${top}px`;
+  popup.hidden = false;
+  popupRow = row;
 }
 
 function renderVisibleMap(shouldZoom = false) {
@@ -885,6 +928,17 @@ const mapSearchForm = document.querySelector('#map-search-form');
 const mapSearchInput = document.querySelector('#map-search');
 const mapSearchStatus = document.querySelector('#map-search-status');
 const placesList = document.querySelector('#canadian-places');
+document.querySelector('#hotspot-quick-view-button').addEventListener('click', () => {
+  if (popupRow) requestHotspotView(popupRow);
+  popupRow = null;
+  document.querySelector('#hotspot-quick-view').hidden = true;
+});
+document.addEventListener('pointerdown', (event) => {
+  if (!event.target.closest('#hotspot-quick-view, #fire-map')) {
+    popupRow = null;
+    document.querySelector('#hotspot-quick-view').hidden = true;
+  }
+});
 if (!window.L) {
   // The plain-canvas fallback shares the same hit-testing data as the map.
   // Convert each click back to lon/lat, then select the province containing it.
@@ -894,7 +948,15 @@ if (!window.L) {
     if (!canvas) return;
     const bounds = canvas.getBoundingClientRect();
     const projection = fallbackProjection(bounds.width, bounds.height);
-    const [lon, lat] = projection.unproject(event.clientX - bounds.left, event.clientY - bounds.top);
+    const x = event.clientX - bounds.left;
+    const y = event.clientY - bounds.top;
+    const hotspot = fallbackHotspotAt(x, y, bounds.width, bounds.height);
+    if (hotspot) {
+      showFallbackViewButton(hotspot, event.clientX, event.clientY);
+      return;
+    }
+    document.querySelector('#hotspot-quick-view').hidden = true;
+    const [lon, lat] = projection.unproject(x, y);
     selectProvinceAt(lat, lon);
   });
   mapSearchStatus.textContent = 'Click anywhere on the Canada view to select a province or territory.';
