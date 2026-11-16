@@ -2,9 +2,9 @@
 // without changing the form's validation and navigation logic.
 const CONFIG = {
   minDate: '2000-11-01',
-  // A one-month landing window keeps the first map fast while leaving a
-  // December 2025 hotspot sample visible in the default Alberta view.
-  defaultStartDate: '2025-12-01',
+  // Start with the complete latest archived year so the default map shows all
+  // available activity for 2025 without requiring a slider change.
+  defaultStartDate: '2025-01-01',
   defaultEndDate: '2025-12-31',
   regions: [
     { value: 'alberta', label: 'Alberta' },

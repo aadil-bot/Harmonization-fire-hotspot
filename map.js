@@ -2,7 +2,7 @@
 // when additional countries or provinces are ready to be explored.
 const CONFIG = {
   minDate: '2000-11-01',
-  defaultStartDate: '2025-12-01',
+  defaultStartDate: '2025-01-01',
   defaultEndDate: '2025-12-31',
   regions: [
     { value: 'alberta', label: 'Alberta', provinceCode: '48' },
@@ -167,10 +167,13 @@ function setupFromUrl() {
   state.view = ['map', 'calendar'].includes(requestedView) ? requestedView : 'map';
   const requestedStart = params.get('start') || CONFIG.defaultStartDate;
   const requestedEnd = params.get('end') || CONFIG.defaultEndDate;
-  const validRegion = CONFIG.regions.some((item) => item.value === params.get('region'));
+  const requestedRegion = params.get('region') || params.get('province') || '';
+  const normalizedRegion = requestedRegion.trim().toLocaleLowerCase('en-CA').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const matchedRegion = CONFIG.regions.find((item) => [item.value, item.label].some((name) =>
+    name.toLocaleLowerCase('en-CA').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') === normalizedRegion));
   const validRole = CONFIG.roles.some((item) => item.value === params.get('role'));
 
-  state.region = validRegion ? params.get('region') : CONFIG.regions[0].value;
+  state.region = matchedRegion?.value || CONFIG.regions[0].value;
   state.role = validRole ? params.get('role') : CONFIG.roles[CONFIG.roles.length - 1].value;
   state.start = requestedStart >= CONFIG.minDate && requestedStart <= today ? requestedStart : CONFIG.defaultStartDate;
   state.end = requestedEnd >= CONFIG.minDate && requestedEnd <= today ? requestedEnd : CONFIG.defaultEndDate;
@@ -519,7 +522,10 @@ async function setMapMaximized(maximized) {
 
 document.addEventListener('fullscreenchange', () => {
   syncMapMaximizedState(document.fullscreenElement === mapPanel);
-  requestAnimationFrame(() => fireMap?.invalidateSize());
+  requestAnimationFrame(() => {
+    fireMap?.invalidateSize({ pan: false });
+    renderVisibleMap();
+  });
 });
 
 mapExpandButton.addEventListener('click', () => setMapMaximized(!state.mapMaximized));
@@ -532,12 +538,16 @@ const mapYearStartValue = document.querySelector('#map-year-start-value');
 const mapYearEndValue = document.querySelector('#map-year-end-value');
 const mapDataStatus = document.querySelector('#map-data-status');
 let mapRows = [];
+let mapDrawToken = 0;
+let pendingFireLayer = null;
+let provinceRowsCache = { source: null, region: null, index: null, rows: [] };
 let popupRow = null;
 let initialYearRows = window.MOSAIC_YEAR_ROWS || null;
 let fireMap = null;
 let fireLayer = null;
 let fireBoundaryLayer = null;
 let mapRenderer = null;
+let mapSizeObserver = null;
 // Province shapes load on demand from Statistics Canada's 2021 generalized
 // province/territory boundaries; PRUID links each shape to the sidebar choice.
 let activeProvinceFeature = null;
@@ -554,15 +564,16 @@ function loadProvinceIndex(region) {
   const load = new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = `data/canada/provinces/${region.value}.js`;
-    script.onload = () => {
-      const feature = window.MOSAIC_PROVINCE_BOUNDARIES?.[region.provinceCode];
-      if (!feature) {
-        reject(new Error(`Boundary data missing for ${region.label}.`));
-        return;
+    script.onload = async () => {
+      try {
+        const feature = window.MOSAIC_PROVINCE_BOUNDARIES?.[region.provinceCode];
+        if (!feature) throw new Error(`Boundary data missing for ${region.label}.`);
+        const entry = { feature, index: await makeProvinceIndex(feature) };
+        provinceIndexes.set(region.value, entry);
+        resolve(entry);
+      } catch (error) {
+        reject(error);
       }
-      const entry = { feature, index: makeProvinceIndex(feature) };
-      provinceIndexes.set(region.value, entry);
-      resolve(entry);
     };
     script.onerror = () => reject(new Error(`Could not load the ${region.label} boundary.`));
     document.head.append(script);
@@ -586,7 +597,7 @@ function normalizeBoundaryRing(ring) {
   return points;
 }
 
-function makeProvinceIndex(feature) {
+async function makeProvinceIndex(feature) {
   if (!feature) return null;
   const bucketSize = 0.5;
   const buckets = new Map();
@@ -596,10 +607,11 @@ function makeProvinceIndex(feature) {
     ? feature.geometry.coordinates
     : [feature.geometry.coordinates];
 
-  coordinates.forEach((sourceRings) => {
+  for (let polygonIndex = 0; polygonIndex < coordinates.length; polygonIndex += 1) {
+    const sourceRings = coordinates[polygonIndex];
     const rings = sourceRings.map(normalizeBoundaryRing).filter((ring) => ring.length >= 3);
     const outer = rings[0];
-    if (!outer) return;
+    if (!outer) continue;
     const polygonBounds = { minLon: Infinity, minLat: Infinity, maxLon: -Infinity, maxLat: -Infinity };
     outer.forEach(([lon, lat]) => {
       polygonBounds.minLon = Math.min(polygonBounds.minLon, lon);
@@ -620,7 +632,10 @@ function makeProvinceIndex(feature) {
         buckets.get(key).push(polygon);
       }
     }
-  });
+    if (polygonIndex > 0 && polygonIndex % 500 === 0) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+  }
   return { buckets, polygons, bounds, bucketSize };
 }
 
@@ -647,6 +662,19 @@ function pointInIndex(index, lon, lat) {
 }
 
 function pointInProvince(lon, lat) { return pointInIndex(activeProvinceIndex, lon, lat); }
+
+function getRowsInProvince() {
+  if (!activeProvinceIndex) return [];
+  if (provinceRowsCache.source !== mapRows || provinceRowsCache.region !== state.region || provinceRowsCache.index !== activeProvinceIndex) {
+    provinceRowsCache = {
+      source: mapRows,
+      region: state.region,
+      index: activeProvinceIndex,
+      rows: mapRows.filter((row) => pointInProvince(row.lon, row.lat)),
+    };
+  }
+  return provinceRowsCache.rows;
+}
 
 function focusMapOnSelectedProvince() {
   const bounds = REGION_BOUNDS[state.region];
@@ -723,6 +751,7 @@ function setActiveProvince(shouldZoom = true) {
   const region = CONFIG.regions.find((item) => item.value === state.region);
   if (!region) return;
   if (activeRegionValue === region.value) {
+    if (shouldZoom && !pendingMapPlace) focusMapOnSelectedProvince();
     renderVisibleMap();
     return;
   }
@@ -765,11 +794,10 @@ function setActiveProvince(shouldZoom = true) {
 function mapActivityValue(row) { return harmonizationMode.value === 'harmonized' ? Number(row.harmonized_cells) : Number(row.fire_days); }
 
 function getVisibleRows() {
-  if (!activeProvinceIndex) return [];
-  return mapRows.filter((row) => {
+  return getRowsInProvince().filter((row) => {
     const withinDateRange = (!row.last_fire || row.last_fire >= state.start) && (!row.first_fire || row.first_fire <= state.end);
     const matchesMode = harmonizationMode.value === 'harmonized' || (harmonizationMode.value === 'modis' ? row.source.toUpperCase().includes('MODIS') : row.source.toUpperCase().includes('VIIRS'));
-    return withinDateRange && matchesMode && pointInProvince(row.lon, row.lat);
+    return withinDateRange && matchesMode;
   });
 }
 
@@ -786,31 +814,50 @@ function requestHotspotView(row) {
 
 function drawFireMap(rows) {
   if (!fireMap || !fireLayer) return;
-  fireLayer.clearLayers();
-  const visibleBounds = fireMap.getBounds().pad(0.04);
-  rows.forEach((row) => {
-    if (!visibleBounds.contains([row.lat, row.lon])) return;
-    const activity = mapActivityValue(row);
-    const colour = fireColour(activity);
-    const radius = Math.min(6, 2.4 + Math.log1p(activity) * .55);
-    const viewButton = document.createElement('button');
-    viewButton.type = 'button';
-    viewButton.className = 'hotspot-popup-view';
-    viewButton.textContent = 'View';
-    viewButton.setAttribute('aria-label', `View hotspot details at ${row.lat.toFixed(2)}, ${row.lon.toFixed(2)}`);
-    viewButton.addEventListener('click', (event) => {
-      event.stopPropagation();
-      fireMap.closePopup();
-      requestHotspotView(row);
-    });
-    const popupContent = document.createElement('div');
-    popupContent.className = 'hotspot-popup-content';
-    popupContent.append(viewButton);
-    L.circleMarker([row.lat, row.lon], {
-      renderer: mapRenderer, radius, color: '#371e17', weight: .35,
-      fillColor: colour.color, fillOpacity: colour.opacity,
-    }).bindPopup(popupContent, { className: 'hotspot-view-popup', minWidth: 0, maxWidth: 100, closeButton: false, autoPanPadding: [12, 12] }).addTo(fireLayer);
-  });
+  const renderToken = ++mapDrawToken;
+  // Draw into a detached layer and swap it in only when the full marker set
+  // is ready, so map resizing cannot leave a partial initial render behind.
+  pendingFireLayer?.clearLayers();
+  const nextLayer = L.layerGroup();
+  pendingFireLayer = nextLayer;
+  let rowIndex = 0;
+  const addBatch = () => {
+    if (renderToken !== mapDrawToken) return;
+    const batchEnd = Math.min(rows.length, rowIndex + 300);
+    for (; rowIndex < batchEnd; rowIndex += 1) {
+      const row = rows[rowIndex];
+      const activity = mapActivityValue(row);
+      const colour = fireColour(activity);
+      const radius = Math.min(6, 2.4 + Math.log1p(activity) * .55);
+      L.circleMarker([row.lat, row.lon], {
+        renderer: mapRenderer, radius, color: '#371e17', weight: .35,
+        fillColor: colour.color, fillOpacity: colour.opacity,
+      }).bindPopup(() => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'hotspot-popup-view';
+        button.textContent = 'View';
+        button.setAttribute('aria-label', `View hotspot details at ${row.lat.toFixed(2)}, ${row.lon.toFixed(2)}`);
+        button.addEventListener('click', (event) => {
+          event.stopPropagation();
+          fireMap.closePopup();
+          requestHotspotView(row);
+        });
+        const content = document.createElement('div');
+        content.className = 'hotspot-popup-content';
+        content.append(button);
+        return content;
+      }, { className: 'hotspot-view-popup', minWidth: 0, maxWidth: 100, closeButton: false, autoPanPadding: [12, 12] }).addTo(nextLayer);
+    }
+    if (rowIndex < rows.length) requestAnimationFrame(addBatch);
+    else {
+      fireMap.removeLayer(fireLayer);
+      fireLayer = nextLayer;
+      pendingFireLayer = null;
+      fireLayer.addTo(fireMap);
+    }
+  };
+  addBatch();
 }
 function drawFallback(rows) {
   const host = document.querySelector('#fire-map');
@@ -940,13 +987,26 @@ async function loadYearRange() {
   mapYearEndValue.value = String(endYear);
   mapDataStatus.textContent = `Loading fire cells for ${startYear}–${endYear}…`;
   try {
-    const years = [];
-    for (let year = startYear; year <= endYear; year += 1) years.push(year);
+    const years = [endYear];
+    for (let year = startYear; year < endYear; year += 1) years.push(year);
     const collected = [];
-    for (const year of years) collected.push(...await getYearRows(year));
-    if (requestedYearRange !== requestKey) return;
-    mapRows = collected;
+    mapRows = [];
     renderVisibleMap();
+    mapDataStatus.textContent = `Loading fire cells for ${startYear}–${endYear}…`;
+    for (let index = 0; index < years.length; index += 1) {
+      const year = years[index];
+      const yearRows = await getYearRows(year);
+      if (requestedYearRange !== requestKey) return;
+      collected.push(...yearRows);
+      const loadedCount = index + 1;
+      if (loadedCount === 1 || loadedCount % 3 === 0 || loadedCount === years.length) {
+        mapRows = loadedCount === years.length ? collected : collected.slice();
+        renderVisibleMap();
+        if (loadedCount < years.length) {
+          mapDataStatus.textContent = `Showing loaded activity · ${loadedCount} of ${years.length} archive years loaded`;
+        }
+      }
+    }
   } catch (error) {
     if (requestedYearRange === requestKey) mapDataStatus.textContent = `${error.message} Check that the selected year files are available.`;
   }
@@ -1003,7 +1063,6 @@ if (window.L) {
   }).addTo(fireMap);
   fireBoundaryLayer = L.layerGroup().addTo(fireMap);
   fireLayer = L.layerGroup().addTo(fireMap);
-  fireMap.on('moveend', () => drawFireMap(getVisibleRows()));
   // Load only the selected province initially; other boundary files are lazy
   // loaded when the user clicks their area, keeping first load lightweight.
   fireMap.on('click', (event) => {
@@ -1012,7 +1071,25 @@ if (window.L) {
   window.addEventListener('resize', () => requestAnimationFrame(() => {
     fireMap?.invalidateSize({ pan: false });
     updateCanadaZoomLimit();
+    renderVisibleMap();
   }));
+  if ('ResizeObserver' in window) {
+    let previousMapSize = '';
+    mapSizeObserver = new ResizeObserver(([entry]) => {
+      const width = Math.round(entry.contentRect.width);
+      const height = Math.round(entry.contentRect.height);
+      if (width < 1 || height < 1) return;
+      const size = `${width}x${height}`;
+      if (size === previousMapSize) return;
+      previousMapSize = size;
+      requestAnimationFrame(() => {
+        fireMap?.invalidateSize({ pan: false });
+        updateCanadaZoomLimit();
+        renderVisibleMap();
+      });
+    });
+    mapSizeObserver.observe(document.querySelector('#fire-map'));
+  }
 }
 
 const mapSearchForm = document.querySelector('#map-search-form');
