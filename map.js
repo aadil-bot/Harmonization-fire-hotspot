@@ -147,7 +147,10 @@ function applyControlChange(changedControl) {
   state.region = controls.region.value;
   state.role = controls.role.value;
 
-  if (changedControl === controls.region) renderRegion();
+  if (changedControl === controls.region) {
+    fallbackOverview = false;
+    renderRegion();
+  }
   if (changedControl === controls.role) renderRoleDescription();
   renderDateSummary();
 
@@ -167,10 +170,17 @@ function setupFromUrl() {
   state.view = ['map', 'calendar'].includes(requestedView) ? requestedView : 'map';
   const requestedStart = params.get('start') || CONFIG.defaultStartDate;
   const requestedEnd = params.get('end') || CONFIG.defaultEndDate;
-  const validRegion = CONFIG.regions.some((item) => item.value === params.get('region'));
+  const requestedRegion = params.get('region')?.trim().toLocaleLowerCase('en-CA');
+  // Accept both the canonical dropdown value and a region label in older
+  // bookmarks/links, while always storing the canonical value in page state.
+  const matchedRegion = CONFIG.regions.find((item) => (
+    item.value.toLocaleLowerCase('en-CA') === requestedRegion
+    || item.label.toLocaleLowerCase('en-CA') === requestedRegion
+    || item.value.replaceAll('-', ' ').toLocaleLowerCase('en-CA') === requestedRegion
+  ));
   const validRole = CONFIG.roles.some((item) => item.value === params.get('role'));
 
-  state.region = validRegion ? params.get('region') : CONFIG.regions[0].value;
+  state.region = matchedRegion?.value || CONFIG.regions[0].value;
   state.role = validRole ? params.get('role') : CONFIG.roles[CONFIG.roles.length - 1].value;
   state.start = requestedStart >= CONFIG.minDate && requestedStart <= today ? requestedStart : CONFIG.defaultStartDate;
   state.end = requestedEnd >= CONFIG.minDate && requestedEnd <= today ? requestedEnd : CONFIG.defaultEndDate;
@@ -544,6 +554,9 @@ let activeProvinceFeature = null;
 let activeProvinceIndex = null;
 let activeRegionValue = null;
 let pendingMapPlace = null;
+// The no-Leaflet canvas opens focused on the chosen region. Reset switches it
+// back to the Canada overview so users can select another province by clicking.
+let fallbackOverview = false;
 const provinceIndexes = new Map();
 const pendingProvinceLoads = new Map();
 
@@ -649,10 +662,20 @@ function pointInIndex(index, lon, lat) {
 function pointInProvince(lon, lat) { return pointInIndex(activeProvinceIndex, lon, lat); }
 
 function focusMapOnSelectedProvince() {
-  const bounds = REGION_BOUNDS[state.region];
-  if (!fireMap || !bounds) return false;
-  const [west, south, east, north] = bounds;
+  if (!fireMap) return false;
   fireMap.invalidateSize({ pan: false });
+  const boundary = fireBoundaryLayer?.getLayers()[0];
+  if (boundary?.getBounds().isValid()) {
+    fireMap.fitBounds(boundary.getBounds(), {
+      paddingTopLeft: [24, 64],
+      paddingBottomRight: [24, 78],
+      animate: false,
+    });
+    return true;
+  }
+  const bounds = REGION_BOUNDS[state.region];
+  if (!bounds) return false;
+  const [west, south, east, north] = bounds;
   fireMap.fitBounds([[south, west], [north, east]], {
     paddingTopLeft: [24, 64],
     paddingBottomRight: [24, 78],
@@ -661,10 +684,33 @@ function focusMapOnSelectedProvince() {
   return true;
 }
 
-// Use one Canada-wide projection for the canvas fallback so every province is
-// reachable even when Leaflet or its basemap tiles are unavailable.
+function refocusSelectedProvinceAfterLayout(regionValue) {
+  // Wait for the view transition and browser layout before fitting the actual
+  // province geometry; hidden or zero-size maps give Leaflet the wrong bounds.
+  window.setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (state.region !== regionValue || state.view !== 'map' || !fireMap) return;
+    fireMap.invalidateSize({ pan: false });
+    const boundary = fireBoundaryLayer?.getLayers()[0];
+    if (boundary?.getBounds().isValid()) {
+      fireMap.fitBounds(boundary.getBounds(), {
+        paddingTopLeft: [24, 64],
+        paddingBottomRight: [24, 78],
+        animate: false,
+      });
+    } else {
+      focusMapOnSelectedProvince();
+    }
+    renderVisibleMap();
+  })), 300);
+}
+
+// Project either the selected region or the Canada overview for the canvas
+// fallback so it remains useful when Leaflet or basemap tiles are unavailable.
 function fallbackProjection(width, height) {
-  const bounds = { minLon: -141.5, maxLon: -51.5, minLat: 41.5, maxLat: 83.5 };
+  const [west, south, east, north] = fallbackOverview
+    ? [-141.5, 41.5, -51.5, 83.5]
+    : (REGION_BOUNDS[state.region] || [-141.5, 41.5, -51.5, 83.5]);
+  const bounds = { minLon: west, maxLon: east, minLat: south, maxLat: north };
   const padding = 34;
   const centerLat = (bounds.minLat + bounds.maxLat) / 2;
   const xScaleFactor = Math.cos(centerLat * Math.PI / 180);
@@ -692,9 +738,10 @@ async function selectProvinceAt(lat, lon) {
     try {
       const entry = await loadProvinceIndex(region);
       if (pointInIndex(entry.index, lon, lat)) {
+        fallbackOverview = false;
         controls.region.value = region.value;
         applyControlChange(controls.region);
-        document.querySelector('#map-search-status').textContent = `${region.label} selected from the map.`;
+        document.querySelector('#map-search-status').textContent = `${region.label} selected. Use Reset map to choose another province or territory.`;
         return;
       }
     } catch { /* Keep checking other overlapping province bounds. */ }
@@ -711,9 +758,10 @@ async function selectProvinceAt(lat, lon) {
       };
       return distance(item) < distance(closest) ? item : closest;
     }, candidates[0]);
+    fallbackOverview = false;
     controls.region.value = region.value;
     applyControlChange(controls.region);
-    document.querySelector('#map-search-status').textContent = `${region.label} selected from the map.`;
+    document.querySelector('#map-search-status').textContent = `${region.label} selected. Use Reset map to choose another province or territory.`;
     return;
   }
   document.querySelector('#map-search-status').textContent = 'No Canadian province or territory was found at that point.';
@@ -756,6 +804,7 @@ function setActiveProvince(shouldZoom = true) {
       boundary.addTo(fireBoundaryLayer);
     }
     renderVisibleMap();
+    refocusSelectedProvinceAfterLayout(region.value);
     if(state.view==='live') renderLiveFeed();
   }).catch(() => {
     if (state.region === region.value) mapDataStatus.textContent = `Boundary data for ${region.label} could not be loaded.`;
@@ -765,11 +814,18 @@ function setActiveProvince(shouldZoom = true) {
 function mapActivityValue(row) { return harmonizationMode.value === 'harmonized' ? Number(row.harmonized_cells) : Number(row.fire_days); }
 
 function getVisibleRows() {
-  if (!activeProvinceIndex) return [];
+  const regionBounds = REGION_BOUNDS[state.region];
   return mapRows.filter((row) => {
     const withinDateRange = (!row.last_fire || row.last_fire >= state.start) && (!row.first_fire || row.first_fire <= state.end);
     const matchesMode = harmonizationMode.value === 'harmonized' || (harmonizationMode.value === 'modis' ? row.source.toUpperCase().includes('MODIS') : row.source.toUpperCase().includes('VIIRS'));
-    return withinDateRange && matchesMode && pointInProvince(row.lon, row.lat);
+    // Show a quick bounding-box pass while the detailed province geometry is
+    // downloading/indexing, then immediately replace it with exact polygon hits.
+    const isInRegion = activeProvinceIndex
+      ? pointInProvince(row.lon, row.lat)
+      : Boolean(regionBounds
+        && row.lon >= regionBounds[0] && row.lon <= regionBounds[2]
+        && row.lat >= regionBounds[1] && row.lat <= regionBounds[3]);
+    return withinDateRange && matchesMode && isInRegion;
   });
 }
 
@@ -895,14 +951,18 @@ function renderVisibleMap(shouldZoom = false) {
     if (shouldZoom && activeProvinceFeature && fireBoundaryLayer.getLayers().length) {
       fireMap.fitBounds(fireBoundaryLayer.getLayers()[0].getBounds(), { padding: [24, 24] });
     }
-  } else if (activeProvinceIndex) {
-    drawFallback(rows);
   } else {
-    drawFallback([]);
+    // The bounding-box pass makes detections visible before the province index
+    // is ready; once it is ready, getVisibleRows() switches to exact geometry.
+    drawFallback(rows);
   }
   const region = CONFIG.regions.find((item) => item.value === state.region)?.label || state.region;
   const yearLabel = `${mapYearStart.value}–${mapYearEnd.value}`;
-  if (activeProvinceIndex) mapDataStatus.textContent = `${rows.length.toLocaleString()} ${harmonizationMode.options[harmonizationMode.selectedIndex].text.toLowerCase()} in ${region} · ${yearLabel}${rows.length ? ` · ${rows[0].source}` : ' · no records in this range'}`;
+  if (mapRows.length) {
+    const loadingNote = activeProvinceIndex ? '' : ' · refining province boundary';
+    const progressNote = yearLoadProgress ? ` · ${yearLoadProgress}` : '';
+    mapDataStatus.textContent = `${rows.length.toLocaleString()} ${harmonizationMode.options[harmonizationMode.selectedIndex].text.toLowerCase()} in ${region} · ${yearLabel}${rows.length ? ` · ${rows[0].source}` : ' · no records in this range'}${loadingNote}${progressNote}`;
+  }
 }
 
 const yearRowsCache = new Map();
@@ -931,6 +991,7 @@ function getYearRows(year) {
 }
 
 let requestedYearRange = '';
+let yearLoadProgress = '';
 async function loadYearRange() {
   const startYear = Number(mapYearStart.value);
   const endYear = Number(mapYearEnd.value);
@@ -939,16 +1000,37 @@ async function loadYearRange() {
   mapYearStartValue.value = String(startYear);
   mapYearEndValue.value = String(endYear);
   mapDataStatus.textContent = `Loading fire cells for ${startYear}–${endYear}…`;
+  yearLoadProgress = 'loading archive years';
+  mapRows = [];
   try {
     const years = [];
     for (let year = startYear; year <= endYear; year += 1) years.push(year);
     const collected = [];
-    for (const year of years) collected.push(...await getYearRows(year));
+    for (let index = 0; index < years.length; index += 1) {
+      const year = years[index];
+      collected.push(...await getYearRows(year));
+      if (requestedYearRange !== requestKey) return;
+
+      // Show the first year as soon as it arrives, then update in small batches
+      // so long historical ranges do not leave the map blank while loading.
+      const isFirstYear = index === 0;
+      const isBatchBoundary = (index + 1) % 3 === 0;
+      const isLastYear = index === years.length - 1;
+      if (isFirstYear || isBatchBoundary || isLastYear) {
+        mapRows = collected.slice();
+        yearLoadProgress = isLastYear ? '' : `loading archive data (${year} ready)`;
+        renderVisibleMap();
+      }
+    }
     if (requestedYearRange !== requestKey) return;
     mapRows = collected;
+    yearLoadProgress = '';
     renderVisibleMap();
   } catch (error) {
-    if (requestedYearRange === requestKey) mapDataStatus.textContent = `${error.message} Check that the selected year files are available.`;
+    if (requestedYearRange === requestKey) {
+      yearLoadProgress = '';
+      mapDataStatus.textContent = `${error.message} Check that the selected year files are available.`;
+    }
   }
 }
 
@@ -1050,16 +1132,21 @@ if (!window.L) {
     const [lon, lat] = projection.unproject(x, y);
     selectProvinceAt(lat, lon);
   });
-  mapSearchStatus.textContent = 'Click anywhere on the Canada view to select a province or territory.';
+  mapSearchStatus.textContent = 'Focused on the selected province. Use Reset map to choose another province or territory.';
 }
 CANADIAN_PLACES.forEach(([name]) => { const option = document.createElement('option'); option.value = name; placesList.append(option); });
 CONFIG.regions.forEach((region) => { const option = document.createElement('option'); option.value = region.label; placesList.append(option); });
 
 document.querySelector('#map-reset').addEventListener('click', () => {
   if (fireMap) focusMapOnSelectedProvince();
-  else renderVisibleMap();
+  else {
+    fallbackOverview = true;
+    renderVisibleMap();
+  }
   const province = CONFIG.regions.find((item) => item.value === state.region)?.label || 'selected province';
-  mapSearchStatus.textContent = `Map reset to ${province}.`;
+  mapSearchStatus.textContent = fireMap
+    ? `Map reset to ${province}.`
+    : `Canada overview restored; ${province} remains selected.`;
 });
 
 // Keep the location search tucked behind an icon until the user needs it.
@@ -1094,6 +1181,7 @@ mapSearchForm.addEventListener('submit', async (event) => {
   const normalized = query.toLocaleLowerCase('en-CA');
   const region = CONFIG.regions.find((item) => item.label.toLocaleLowerCase('en-CA') === normalized || item.value.replaceAll('-', ' ') === normalized);
   if (region) {
+    fallbackOverview = false;
     controls.region.value = region.value;
     applyControlChange(controls.region);
     mapSearchStatus.textContent = `${region.label} selected.`;
@@ -1103,10 +1191,12 @@ mapSearchForm.addEventListener('submit', async (event) => {
   if (place) {
     const [name, lat, lon, regionValue] = place;
     if (controls.region.value !== regionValue) {
+      fallbackOverview = false;
       controls.region.value = regionValue;
       pendingMapPlace = { regionValue, lat, lon, zoom: 9 };
       applyControlChange(controls.region);
     } else {
+      fallbackOverview = false;
       fireMap?.setView([lat, lon], 9);
     }
     mapSearchStatus.textContent = `Showing ${name}, ${CONFIG.regions.find((item) => item.value === regionValue).label}.`;
@@ -1161,6 +1251,17 @@ mapYearEnd.addEventListener('change', updateDateRangeFromSlider);
 setActiveProvince(true);
 syncSliderFromDates();
 loadYearRange();
+
+// Refit after deferred styles, fonts, and the initial view transition settle.
+// This final startup pass also redraws any year rows that arrived meanwhile.
+window.addEventListener('load', () => {
+  if (state.view !== 'map') return;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    fireMap?.invalidateSize({ pan: false });
+    focusMapOnSelectedProvince();
+    renderVisibleMap();
+  }));
+});
 
 const compareRegionA = document.querySelector('#compare-region-a');
 const compareRegionB = document.querySelector('#compare-region-b');
