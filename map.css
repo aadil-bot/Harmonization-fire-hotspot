@@ -186,7 +186,7 @@ body.map-maximized .map-panel { position:fixed; z-index:1000; inset:0; width:100
 
 /* Give the map the first screen and place the role guidance below the full map. */
 .map-view { flex:0 0 auto; min-height:0; overflow:visible; }
-.map-view .map-panel { flex:0 0 auto; width:100%; height:auto; min-height:0; aspect-ratio:1 / 1; }
+.map-view .map-panel { flex:0 0 auto; width:100%; height:clamp(320px, calc(100dvh - var(--topbar-height) - 230px), 1050px); min-height:0; aspect-ratio:auto; }
 .map-view #fire-map { min-height:0; }
 body.map-maximized .map-view .map-panel,
 .map-panel:fullscreen { width:100vw; height:100vh; height:100dvh; min-height:0; aspect-ratio:auto; }

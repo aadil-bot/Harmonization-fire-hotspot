@@ -42,6 +42,14 @@ const REGION_BOUNDS = {
 // envelope. Province selection and hotspot filtering remain unchanged.
 const CANADA_MAP_BOUNDS = [[41.5, -141.5], [83.5, -51.5]];
 
+function updateCanadaZoomLimit() {
+  if (!fireMap || !fireMap.getSize().x || !fireMap.getSize().y) return;
+  // Keep the Canada envelope larger than the visible map window at minimum
+  // zoom so Leaflet never has to snap the map abruptly against its bounds.
+  const fitZoom = fireMap.getBoundsZoom(CANADA_MAP_BOUNDS, true, L.point(24, 24));
+  fireMap.setMinZoom(Math.max(2.5, fitZoom));
+}
+
 const CANADIAN_PLACES = [
   ['Vancouver', 49.2827, -123.1207, 'british-columbia'], ['Victoria', 48.4284, -123.3656, 'british-columbia'],
   ['Kelowna', 49.888, -119.496, 'british-columbia'], ['Calgary', 51.0447, -114.0719, 'alberta'], ['Edmonton', 53.5461, -113.4938, 'alberta'],
@@ -957,11 +965,15 @@ if (window.L) {
   fireMap = L.map('fire-map', {
     preferCanvas: true,
     maxBounds: CANADA_MAP_BOUNDS,
-    maxBoundsViscosity: 1,
+    maxBoundsViscosity: 0.25,
     minZoom: 2.5,
     maxZoom: 12,
     worldCopyJump: false,
   }).setView([62, -98], 3);
+  requestAnimationFrame(() => {
+    fireMap?.invalidateSize({ pan: false });
+    updateCanadaZoomLimit();
+  });
   mapRenderer = L.canvas({ padding: .5, tolerance: 10 });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 12,
@@ -979,7 +991,10 @@ if (window.L) {
   fireMap.on('click', (event) => {
     selectProvinceAt(event.latlng.lat, event.latlng.lng);
   });
-  window.addEventListener('resize', () => fireMap?.invalidateSize());
+  window.addEventListener('resize', () => requestAnimationFrame(() => {
+    fireMap?.invalidateSize({ pan: false });
+    updateCanadaZoomLimit();
+  }));
 }
 
 const mapSearchForm = document.querySelector('#map-search-form');
