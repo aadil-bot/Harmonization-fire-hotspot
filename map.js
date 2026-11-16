@@ -511,11 +511,7 @@ async function setMapMaximized(maximized) {
 
 document.addEventListener('fullscreenchange', () => {
   syncMapMaximizedState(document.fullscreenElement === mapPanel);
-  requestAnimationFrame(() => {
-    if (!fireMap) return;
-    fireMap.invalidateSize();
-    updateCanadaMapLimits();
-  });
+  requestAnimationFrame(() => fireMap?.invalidateSize());
 });
 
 mapExpandButton.addEventListener('click', () => setMapMaximized(!state.mapMaximized));
@@ -959,6 +955,8 @@ if (window.L) {
     preferCanvas: true,
     maxBounds: CANADA_MAP_BOUNDS,
     maxBoundsViscosity: 1,
+    minZoom: 2.5,
+    maxZoom: 12,
     worldCopyJump: false,
   }).setView([62, -98], 3);
   mapRenderer = L.canvas({ padding: .5, tolerance: 10 });
@@ -970,19 +968,7 @@ if (window.L) {
   fireMap.on('click', (event) => {
     selectProvinceAt(event.latlng.lat, event.latlng.lng);
   });
-  updateCanadaMapLimits();
-  window.addEventListener('resize', () => {
-    if (!fireMap) return;
-    fireMap.invalidateSize();
-    updateCanadaMapLimits();
-  });
-}
-
-function updateCanadaMapLimits() {
-  if (!fireMap) return;
-  const canadaFitZoom = fireMap.getBoundsZoom(CANADA_MAP_BOUNDS, false, [24, 24]);
-  fireMap.setMinZoom(Math.max(2, canadaFitZoom));
-  fireMap.setMaxBounds(CANADA_MAP_BOUNDS);
+  window.addEventListener('resize', () => fireMap?.invalidateSize());
 }
 
 const mapSearchForm = document.querySelector('#map-search-form');
@@ -1026,9 +1012,10 @@ CANADIAN_PLACES.forEach(([name]) => { const option = document.createElement('opt
 CONFIG.regions.forEach((region) => { const option = document.createElement('option'); option.value = region.label; placesList.append(option); });
 
 document.querySelector('#map-reset').addEventListener('click', () => {
-  if (!fireMap) { renderVisibleMap(); mapSearchStatus.textContent = 'Map reset to the full Canada view. Select a province by clicking it on the map.'; return; }
-  fireMap.fitBounds(CANADA_MAP_BOUNDS, { padding: [24, 24] });
-  mapSearchStatus.textContent = 'Map reset to the full Canada view. Click a province or territory to select it.';
+  if (fireMap) focusMapOnSelectedProvince();
+  else renderVisibleMap();
+  const province = CONFIG.regions.find((item) => item.value === state.region)?.label || 'selected province';
+  mapSearchStatus.textContent = `Map reset to ${province}.`;
 });
 
 // Keep the location search tucked behind an icon until the user needs it.
@@ -1095,13 +1082,15 @@ window.addEventListener('filtersChanged', () => {
 });
 window.addEventListener('viewChanged', (event) => {
   if ((event.detail?.view || event.detail) !== 'map') return;
-  requestAnimationFrame(() => {
-    if (fireMap) {
-      fireMap.invalidateSize();
+  // Wait for the calendar-to-map animation to finish before redrawing Leaflet.
+  window.setTimeout(() => {
+    if (state.view !== 'map') return;
+    requestAnimationFrame(() => {
+      fireMap?.invalidateSize();
       focusMapOnSelectedProvince();
-    }
-    renderVisibleMap();
-  });
+      renderVisibleMap();
+    });
+  }, 260);
 });
 harmonizationMode.addEventListener('change', () => {
   if (harmonizationMode.value === 'modis') {
