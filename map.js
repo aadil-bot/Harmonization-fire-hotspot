@@ -724,6 +724,7 @@ function setActiveProvince(shouldZoom = true) {
     if (window.L && fireMap && fireBoundaryLayer) {
       const boundary = L.geoJSON(activeProvinceFeature, {
         interactive: false,
+        renderer: mapRenderer,
         style: { color: '#92a18f', weight: 1.2, opacity: 0.8, fillColor: '#405b45', fillOpacity: 0.13 },
       });
       boundary.addTo(fireBoundaryLayer);
@@ -760,7 +761,9 @@ function requestHotspotView(row) {
 function drawFireMap(rows) {
   if (!fireMap || !fireLayer) return;
   fireLayer.clearLayers();
+  const visibleBounds = fireMap.getBounds().pad(0.04);
   rows.forEach((row) => {
+    if (!visibleBounds.contains([row.lat, row.lon])) return;
     const activity = mapActivityValue(row);
     const colour = fireColour(activity);
     const radius = Math.min(6, 2.4 + Math.log1p(activity) * .55);
@@ -960,9 +963,17 @@ if (window.L) {
     worldCopyJump: false,
   }).setView([62, -98], 3);
   mapRenderer = L.canvas({ padding: .5, tolerance: 10 });
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap contributors' }).addTo(fireMap);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 12,
+    maxNativeZoom: 12,
+    updateWhenIdle: true,
+    updateWhenZooming: false,
+    keepBuffer: 1,
+    attribution: '© OpenStreetMap contributors',
+  }).addTo(fireMap);
   fireBoundaryLayer = L.layerGroup().addTo(fireMap);
   fireLayer = L.layerGroup().addTo(fireMap);
+  fireMap.on('moveend', () => drawFireMap(getVisibleRows()));
   // Load only the selected province initially; other boundary files are lazy
   // loaded when the user clicks their area, keeping first load lightweight.
   fireMap.on('click', (event) => {

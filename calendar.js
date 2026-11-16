@@ -65,8 +65,12 @@
       const provinceMonths = window.MOSAIC_PROVINCE_MONTHS?.[region] || {};
       const mode = document.querySelector('#harmonization-mode')?.value || 'harmonized';
       const factors = window.MOSAIC_CALIBRATION_FACTORS || {};
+      const firstYear = Number(start.slice(0, 4));
+      const lastYear = Number(end.slice(0, 4));
+      const firstMonth = `${firstYear}-01`;
+      const lastMonth = `${lastYear}-12`;
       const records = Object.entries(provinceMonths)
-        .filter(([month]) => month >= start.slice(0, 7) && month <= end.slice(0, 7))
+        .filter(([month]) => month >= firstMonth && month <= lastMonth)
         .filter(([month]) => mode === 'harmonized' || (mode === 'modis' ? Number(month.slice(0, 4)) <= 2011 : Number(month.slice(0, 4)) >= 2012))
         .map(([month, harmonizedCount]) => ({ date: `${month}-01`, count: mode === 'modis' ? harmonizedCount / Number(factors[String(Number(month.slice(5, 7)))]) : harmonizedCount }));
       if (!Object.keys(provinceMonths).length) throw new Error(`No provincial calendar data found for ${region}`);
@@ -77,6 +81,8 @@
   function getMonthTotals(records, start, end) {
     const firstYear = Number(start.slice(0, 4));
     const lastYear = Number(end.slice(0, 4));
+    const firstMonth = `${firstYear}-01`;
+    const lastMonth = `${lastYear}-12`;
     const totals = new Map();
     for (let year = firstYear; year <= lastYear; year += 1) {
       for (let month = 1; month <= 12; month += 1) totals.set(`${year}-${String(month).padStart(2, '0')}`, 0);
@@ -87,7 +93,7 @@
       const count = Number(record.count);
       if (!Number.isFinite(count)) return;
       const monthKey = record.date.slice(0, 7);
-      if (monthKey < start.slice(0, 7) || monthKey > end.slice(0, 7)) return;
+      if (monthKey < firstMonth || monthKey > lastMonth) return;
       if (totals.has(monthKey)) totals.set(monthKey, totals.get(monthKey) + count);
     });
     return { firstYear, lastYear, totals };
@@ -194,10 +200,10 @@
     const archive = window.MOSAIC_PROVINCE_DAILY_META;
     const firstOfMonth = new Date(Date.UTC(year, monthIndex, 1));
     const lastOfMonth = new Date(Date.UTC(year, monthIndex + 1, 0));
-    const firstAllowed = [isoDate(firstOfMonth), latestFilters.start, archive.start].sort().slice(-1)[0];
-    const lastAllowed = [isoDate(lastOfMonth), latestFilters.end, archive.end].sort()[0];
+    const firstAllowed = [isoDate(firstOfMonth), archive.start].sort().slice(-1)[0];
+    const lastAllowed = [isoDate(lastOfMonth), archive.end].sort()[0];
     if (firstAllowed > lastAllowed) {
-      drillSummary.textContent = `No daily observations are available for ${monthName(year, monthIndex)} within the selected dates. The daily provincial archive covers ${archive.start} to ${archive.end}.`;
+      drillSummary.textContent = `No daily observations are available for ${monthName(year, monthIndex)} in the daily provincial archive, which covers ${archive.start} to ${archive.end}.`;
       return;
     }
 
@@ -217,7 +223,7 @@
     currentMonthWeeks = [...weeks.values()];
     const total = currentMonthWeeks.reduce((sum, week) => sum + week.total, 0);
     const modeLabel = document.querySelector('#harmonization-mode')?.selectedOptions[0]?.textContent || 'Harmonized Activity';
-    drillSummary.textContent = `${latestFilters.region.replaceAll('-', ' ')} · ${firstAllowed} to ${lastAllowed} · ${modeLabel} · ${Math.round(total).toLocaleString()} fire-cell-days (active grid cells counted once per day). Weeks run Monday–Sunday and are clipped to this month and your selected dates.`;
+    drillSummary.textContent = `${latestFilters.region.replaceAll('-', ' ')} · ${firstAllowed} to ${lastAllowed} · ${modeLabel} · ${Math.round(total).toLocaleString()} fire-cell-days (active grid cells counted once per day). Weeks run Monday–Sunday and are clipped to this month and the available archive.`;
 
     const max = Math.max(1, ...currentMonthWeeks.map((week) => week.total));
     currentMonthWeeks.forEach((week, index) => {
@@ -525,10 +531,10 @@
     if (mode === 'viirs' && start < '2012-01-01') start = '2012-01-01';
     regionLabel.textContent = region.replaceAll('-', ' ').toUpperCase();
     if (description) description.textContent = mode === 'harmonized'
-      ? 'Monthly harmonized fire-cell-days for this province or territory. A fire-cell-day is one shared grid cell with at least one fire detection on one day. Click a month block to open its weeks. MODIS values before 2012 are calibrated to the VIIRS scale.'
+      ? 'Monthly harmonized fire-cell-days for complete calendar years touched by your selected dates. A fire-cell-day is one shared grid cell with at least one fire detection on one day. Click a month block to open its weeks. MODIS values before 2012 are calibrated to the VIIRS scale.'
       : mode === 'modis'
-        ? 'Monthly MODIS fire-cell-days before 2012, shown on its uncalibrated sensor scale. Each active grid cell is counted once per day. Click a month block to open its weeks.'
-        : 'Monthly VIIRS fire-cell-days from 2012 onward. Each active grid cell is counted once per day. Click a month block to open its weeks.';
+        ? 'Monthly MODIS fire-cell-days for complete selected calendar years before 2012, shown on its uncalibrated sensor scale. Each active grid cell is counted once per day. Click a month block to open its weeks.'
+        : 'Monthly VIIRS fire-cell-days for complete selected calendar years from 2012 onward. Each active grid cell is counted once per day. Click a month block to open its weeks.';
     status.hidden = false;
     status.textContent = `Loading ${region.replaceAll('-', ' ')} ${mode === 'harmonized' ? 'harmonized' : mode.toUpperCase()} calendar…`;    gridWrap.hidden = true;
     legend.hidden = true;
