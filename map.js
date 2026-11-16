@@ -572,16 +572,34 @@ function loadProvinceIndex(region) {
   return load;
 }
 
+function normalizeBoundaryRing(ring) {
+  const points = [];
+  const visit = (value) => {
+    if (!Array.isArray(value)) return;
+    if (value.length >= 2 && Number.isFinite(value[0]) && Number.isFinite(value[1])) {
+      points.push([value[0], value[1]]);
+      return;
+    }
+    value.forEach(visit);
+  };
+  visit(ring);
+  return points;
+}
+
 function makeProvinceIndex(feature) {
   if (!feature) return null;
   const bucketSize = 0.5;
   const buckets = new Map();
   const polygons = [];
   const bounds = { minLon: Infinity, minLat: Infinity, maxLon: -Infinity, maxLat: -Infinity };
+  const coordinates = feature.geometry.type === 'MultiPolygon'
+    ? feature.geometry.coordinates
+    : [feature.geometry.coordinates];
 
-  feature.geometry.coordinates.forEach((rings) => {
+  coordinates.forEach((sourceRings) => {
+    const rings = sourceRings.map(normalizeBoundaryRing).filter((ring) => ring.length >= 3);
     const outer = rings[0];
-    if (!outer?.length) return;
+    if (!outer) return;
     const polygonBounds = { minLon: Infinity, minLat: Infinity, maxLon: -Infinity, maxLat: -Infinity };
     outer.forEach(([lon, lat]) => {
       polygonBounds.minLon = Math.min(polygonBounds.minLon, lon);
