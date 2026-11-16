@@ -430,7 +430,7 @@ function setActiveView(viewName, announce = true) {
 
   // Repaint size-dependent content only after the selected section is visible.
   if (viewName === 'compare') requestAnimationFrame(() => renderComparison());
-  if (viewName === 'live') requestAnimationFrame(() => loadLiveYear());
+  if (viewName === 'live') requestAnimationFrame(() => loadLiveRange());
   if (viewName === 'trend') requestAnimationFrame(() => renderTrend());
 }
 window.setMosaicView = (viewName) => setActiveView(viewName);
@@ -1162,7 +1162,7 @@ const trendNote = document.querySelector('#trend-note');
 const liveFeed = document.querySelector('#live-feed');
 const liveStatus = document.querySelector('#live-status');
 let liveRows = [];
-let liveYearRequested = null;
+let liveRangeRequested = '';
 let trendHits = [];
 let selectedTrendYear = null;
 
@@ -1371,7 +1371,7 @@ function renderLiveFeed() {
   const rows = liveRows.filter((row) => pointInProvince(row.lon,row.lat) && (!row.last_fire || row.last_fire >= state.start) && (!row.first_fire || row.first_fire <= state.end) && (mode === 'harmonized' || (mode === 'modis' ? row.source.toUpperCase().includes('MODIS') : row.source.toUpperCase().includes('VIIRS')))).sort((x,y)=>(y.last_fire||'').localeCompare(x.last_fire||'')).slice(0,40);
   liveFeed.replaceChildren();
   if (!rows.length) { liveStatus.textContent = `No matching hotspot cells found for ${region.label} in the selected dates and sensor mode.`; return; }
-  liveStatus.textContent = `${rows.length} recent mapped hotspot cells · ${rows[0].year} archive`;
+  liveStatus.textContent = `Showing up to ${rows.length} archived hotspot records matching the selected dates.`;
   rows.forEach((row) => {
     const item=document.createElement('li');item.className='live-feed-card';
     const date=document.createElement('time');date.dateTime=row.last_fire;date.textContent=row.last_fire ? new Date(`${row.last_fire}T00:00:00Z`).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric',timeZone:'UTC'}) : 'Date unavailable';
@@ -1381,12 +1381,21 @@ function renderLiveFeed() {
   });
 }
 
-function loadLiveYear() {
-  const year = Math.min(2025, Number(state.end.slice(0,4)) || 2025);
-  if (year === liveYearRequested) { renderLiveFeed(); return; }
-  liveYearRequested=year; liveStatus.textContent=`Loading recent ${year} hotspots…`;
-  getYearRows(year).then((rows)=>{if(liveYearRequested!==year)return;liveRows=rows;renderLiveFeed();})
-    .catch(()=>{if(liveYearRequested===year)liveStatus.textContent=`Could not load the ${year} hotspot archive.`;});
+async function loadLiveRange() {
+  const startYear = Number(mapYearStart.value);
+  const endYear = Number(mapYearEnd.value);
+  const requestKey = `${startYear}:${endYear}`;
+  liveRangeRequested = requestKey;
+  liveStatus.textContent = `Loading archived hotspot records for ${startYear}–${endYear}…`;
+  try {
+    const rows = [];
+    for (let year = startYear; year <= endYear; year += 1) rows.push(...await getYearRows(year));
+    if (liveRangeRequested !== requestKey) return;
+    liveRows = rows;
+    renderLiveFeed();
+  } catch {
+    if (liveRangeRequested === requestKey) liveStatus.textContent = `Could not load the hotspot archive for ${startYear}–${endYear}.`;
+  }
 }
 trendCanvas.addEventListener('pointermove', (event) => {
   const rect = trendCanvas.getBoundingClientRect(), x = event.clientX - rect.left, y = event.clientY - rect.top;
@@ -1420,7 +1429,7 @@ trendBaseline.addEventListener('change', renderTrend);
 trendShowRaw.addEventListener('change', renderTrend);
 compareRegionA.addEventListener('change',renderComparison);compareRegionB.addEventListener('change',renderComparison);
 window.addEventListener('resize',()=>{renderComparison();renderTrend();});
-window.addEventListener('filtersChanged',()=>{if(state.view==='compare')renderComparison();if(state.view==='live')loadLiveYear();if(state.view==='trend')renderTrend();});
+window.addEventListener('filtersChanged',()=>{if(state.view==='compare')renderComparison();if(state.view==='live')loadLiveRange();if(state.view==='trend')renderTrend();});
 harmonizationMode.addEventListener('change',()=>{if(state.view==='compare')renderComparison();if(state.view==='live')renderLiveFeed();if(state.view==='trend')renderTrend();});
 function csvValue(value) {
   const text = String(value ?? '');

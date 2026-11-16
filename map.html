@@ -46,7 +46,7 @@
             <button class="menu-item" id="menu-trend" type="button" role="menuitem" data-view="trend">Regional trends</button>
             <button class="menu-item" id="menu-calendar" type="button" role="menuitem" data-view="calendar">Historical activity calendar</button>
             <button class="menu-item" id="menu-compare" type="button" role="menuitem" data-view="compare">Regional comparison</button>
-            <button class="menu-item" id="menu-live" type="button" role="menuitem" data-view="live">Live hotspot detections</button>
+            <button class="menu-item" id="menu-live" type="button" role="menuitem" data-view="live">Hotspots by date range</button>
           </div>
         </div>
       </div>
@@ -219,8 +219,8 @@
           <p class="analysis-note">Each pair of bars shows one calendar month: orange is province one and teal is province two. Bar height is the monthly total for the activity mode selected in the sidebar. Harmonized values calibrate MODIS observations before 2012 to the VIIRS scale.</p>
         </section>
         <section class="content-view analysis-view" id="view-live" aria-labelledby="live-title" hidden>
-          <div class="analysis-heading"><p class="eyebrow">RECENT DETECTIONS · <span id="live-region-label">ALBERTA</span></p><h1 id="live-title">Hotspot activity feed</h1><p>Recent mapped fire cells for the selected province or territory, ordered by last observed activity.</p></div>
-          <div id="live-status" class="live-status" role="status" aria-live="polite">Loading recent hotspot activity…</div>
+          <div class="analysis-heading"><p class="eyebrow">ARCHIVED DETECTIONS · <span id="live-region-label">ALBERTA</span></p><h1 id="live-title">Hotspot detections in your date range</h1><p>Archived fire-cell observations that overlap the selected dates, ordered by most recent observation.</p></div>
+          <div id="live-status" class="live-status" role="status" aria-live="polite">Loading archived hotspot detections…</div>
           <ol id="live-feed" class="live-feed"></ol>
           <p class="analysis-note">Archive coverage ends in 2025. A hotspot is a satellite fire-cell observation, not a confirmed fire perimeter.</p>
         </section>        <p id="status-message" class="visually-hidden" role="status" aria-live="polite"></p>
